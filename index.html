@@ -132,6 +132,9 @@
                     <button id="tab-diagram" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
                         <i class="fas fa-paint-brush mr-2"></i>Diagram Generator
                     </button>
+                    <button id="tab-files" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
+                        <i class="fas fa-folder mr-2"></i>Files
+                    </button>
                 </div>
 
                 <!-- Content Panels -->
@@ -207,6 +210,24 @@
                     </div>
                     <div id="diagramOutput" class="mt-8 text-center hidden">
                         <img id="generatedImage" src="" alt="Generated Diagram" class="max-w-full h-auto rounded-lg shadow-md mx-auto" />
+                    </div>
+                </div>
+
+                <!-- New Files Panel -->
+                <div id="panel-files" class="tab-panel hidden">
+                    <p class="text-gray-600 mb-4 text-center">Manage all your uploaded VLSI documents here. You can attach a file and then refer to it in other tabs.</p>
+                    <div class="flex justify-center items-center mb-6">
+                        <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                            <input type="file" id="addFile" class="hidden" multiple>
+                            <i class="fas fa-plus mr-2"></i> Add New File
+                        </label>
+                    </div>
+                    <div id="fileListContainer" class="mt-4 p-4 rounded-lg bg-gray-100 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">My Files</h3>
+                        <ul id="fileList" class="space-y-2">
+                            <!-- Files will be added here dynamically -->
+                        </ul>
+                        <p id="noFilesMessage" class="text-gray-500 italic text-sm mt-2">No files added yet.</p>
                     </div>
                 </div>
 
@@ -301,6 +322,9 @@
         const chatHistoryList = document.getElementById('chatHistoryList');
         const copyButton = document.getElementById('copyButton');
         const listenButton = document.getElementById('listenButton');
+        const addFileButton = document.getElementById('addFile');
+        const fileList = document.getElementById('fileList');
+        const noFilesMessage = document.getElementById('noFilesMessage');
 
         // Speech and Image input buttons
         const qaMicButton = document.getElementById('qaMicButton');
@@ -467,7 +491,7 @@
             diagramOutput.classList.add('hidden');
             
             try {
-                const apiKey = "YOUR_API_KEY_GOES_HERE";
+                const apiKey = "AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
                 const payload = {
@@ -519,7 +543,7 @@
             listenButton.innerHTML = '<i class="fas fa-spinner animate-spin mr-2"></i>Loading...';
             
             try {
-                const apiKey = "YOUR_API_KEY_GOES_HERE";
+                const apiKey = "AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
                 const payload = {
@@ -925,6 +949,26 @@
                 helpOutput.classList.remove('hidden');
                 helpOutput.innerHTML = 'Thinking...';
                 callGemini(systemPrompt, helpQuery, false, null, helpOutput, helpOutput);
+            });
+
+            // File management logic for the new Files tab
+            addFileButton.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    noFilesMessage.classList.add('hidden');
+                    for (const file of files) {
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center space-x-2 p-2 bg-white rounded-lg shadow-sm';
+                        li.innerHTML = `
+                            <i class="fas fa-file-alt text-gray-500"></i>
+                            <span class="text-gray-700 truncate">${file.name}</span>
+                        `;
+                        fileList.appendChild(li);
+                    }
+                    showMessage(`${files.length} file(s) added successfully!`, 'success');
+                } else {
+                    showMessage('No file selected.', 'error');
+                }
             });
         });
     </script>
