@@ -83,7 +83,8 @@ Synthesize a Response: It then uses this understanding to formulate a clear, sim
 Essentially, you are not building the LLM; you are leveraging it as a service. You have created a pipeline to send it a specific problem and receive an intelligent, helpful solution in return.
 
 3] The Website
-The website you built is the user interface and the communication channel for your LLM. It's what makes your powerful backend tool accessible and easy to use for anyone, even those who aren't familiar with command-line tools.
+
+The website built is the user interface and the communication channel for your LLM. It's what makes your powerful backend tool accessible and easy to use for anyone, even those who aren't familiar with command-line tools.
 
 index.html file is a single, self-contained application that performs three main functions:
 
