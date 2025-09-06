@@ -8,33 +8,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            color: #1f2937;
-            background-color: #f7f9fc;
-            overflow: hidden; /* Hide scrollbars for the canvas background */
+            background: #f8f7f4;
         }
-        #backgroundCanvas {
+        .live-bg {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
+            left: 0; top: 0;
+            width: 100vw; height: 100vh;
+            z-index: 0;
+            pointer-events: none;
         }
-        .main-container-wrapper {
+        .app-content {
             position: relative;
-            z-index: 1;
-            min-height: 100vh;
-            padding: 1rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            z-index: 10;
         }
-
+        .container {
+            max-width: 1000px;
+        }
+        .tab-panel { min-height: 320px;}
         .message-box {
             position: fixed;
             top: 20px;
@@ -42,7 +36,7 @@
             transform: translateX(-50%);
             padding: 1rem;
             border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             z-index: 1000;
             display: none;
             text-align: center;
@@ -50,927 +44,414 @@
         .message-box.show {
             display: block;
         }
-        .prose a {
-            color: #3b82f6;
-            text-decoration: underline;
+        .sidebar {
+            width: 220px;
+            min-height: 620px;
         }
-        .prose ul, .prose ol {
-            padding-left: 1.5rem;
+        .chat-history-list {
+            max-height: 220px;
+            overflow-y: auto;
         }
-        .prose li {
-            margin-bottom: 0.5rem;
+        .tab-description {
+            font-size: .93rem;
+            margin-bottom: 6px;
+            color: #6b7280;
         }
-        .tab-button.active {
-            border-color: #3b82f6;
-            color: #3b82f6;
+        /* Hide file input text */
+        .file-input {
+            display: none;
         }
-        .icon-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.5rem;
-            border-radius: 9999px;
-            transition-property: background-color;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 150ms;
-            margin-left: 0.5rem;
-        }
-        .icon-button:hover {
-            background-color: rgba(0, 0, 0, 0.05);
+        /* Small bottom tabs */
+        .bottom-tabs {
+            position: absolute;
+            bottom: 24px; left: 16px;
+            display: flex; flex-direction: column; gap: 12px; z-index:20;
         }
     </style>
 </head>
-<body>
-    <canvas id="backgroundCanvas"></canvas>
-
-    <div class="main-container-wrapper">
-        <div id="messageBox" class="message-box bg-red-100 text-red-800"></div>
-
-        <!-- Main Container -->
-        <div class="flex-1 flex flex-col md:flex-row bg-white rounded-xl shadow-lg overflow-hidden max-w-7xl w-full">
-            
-            <!-- Left Sidebar (Chat History and static tabs) -->
-            <div class="w-full md:w-1/4 bg-gray-50 border-r border-gray-200 p-4 flex flex-col">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">Chat History</h2>
-                    <button id="newChatButton" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 px-4 rounded-full transition-colors duration-200 focus:outline-none">
-                        <i class="fas fa-plus mr-2"></i>New Chat
-                    </button>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen app-content">
+    <canvas id="liveBg" class="live-bg"></canvas>
+    <div class="message-box bg-red-100 text-red-800" id="messageBox"></div>
+    <div class="container mx-auto bg-white rounded-xl shadow-lg flex app-content" style="min-height:600px;">
+        <!-- Sidebar -->
+        <div class="sidebar bg-white rounded-l-xl p-4 border-r border-gray-200 flex flex-col justify-between" style="min-width:215px;">
+            <div>
+                <h2 class="text-lg font-bold text-gray-700 mb-2">Chat History</h2>
+                <ul class="chat-history-list" id="chatHistoryList"></ul>
+            </div>
+            <div class="bottom-tabs">
+                <button id="helpTab" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-md font-medium text-sm hover:bg-blue-100">
+                    Help
+                </button>
+                <button id="contactTab" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-md font-medium text-sm hover:bg-green-100">
+                    Contact
+                </button>
+            </div>
+        </div>
+        <!-- Main Content Area -->
+        <div class="flex-1 px-8 py-8 app-content">
+            <h1 class="text-3xl font-bold text-gray-800 mb-3 text-center">VLSI AI Assistant</h1>
+            <p class="text-gray-600 mb-4 text-center">Your unified VLSI design partner—concepts, logs, code, optimization, diagrams, and reporting.</p>
+            <!-- Tabs -->
+            <div class="flex space-x-2 border-b border-gray-200 mb-6">
+                <button class="tab-button w-1/5 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent" id="tab-vlsi">VLSI Q&A</button>
+                <button class="tab-button w-1/5 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent" id="tab-log">Log Analyzer</button>
+                <button class="tab-button w-1/5 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent" id="tab-code">Code Gen/Optimizer</button>
+                <button class="tab-button w-1/5 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent" id="tab-report">Report Summarizer</button>
+                <button class="tab-button w-1/5 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent" id="tab-diagram">Diagram Generator</button>
+            </div>
+            <!-- Panels -->
+            <!-- VLSI Q&A -->
+            <div id="panel-vlsi" class="tab-panel">
+                <div class="tab-description">Ask about any VLSI concept (e.g., "What is VLSI?", "Explain DV?"). Attach images/PDFs or use your voice for queries.</div>
+                <textarea id="vlsiInput" rows="5" class="w-full p-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg mb-2"></textarea>
+                <input type="file" id="vlsiFileInput" class="file-input" accept="image/*,.pdf">
+                <div class="flex items-center space-x-2 mb-4">
+                    <button id="vlsiMicBtn" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm">🎤 Speak</button>
+                    <label for="vlsiFileInput" class="bg-gray-100 border px-3 py-1 rounded-lg text-sm cursor-pointer">📁 Attach</label>
                 </div>
-                <ul id="chatHistoryList" class="flex-1 overflow-y-auto space-y-2 mb-4">
-                    <!-- Chat items will be dynamically added here -->
-                </ul>
-                <div class="space-y-2 mt-auto">
-                    <button id="tab-help" class="tab-button w-full flex items-center p-3 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none">
-                        <i class="fas fa-info-circle mr-2"></i>Help
-                    </button>
-                    <button id="tab-contact" class="tab-button w-full flex items-center p-3 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors duration-200 focus:outline-none">
-                        <i class="fas fa-envelope mr-2"></i>Contact
-                    </button>
+                <div class="flex">
+                    <button id="vlsiSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Ask ✨</button>
                 </div>
             </div>
-
-            <!-- Main Content Area -->
-            <div class="flex-1 p-8 flex flex-col">
-                <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">VLSI AI Assistant</h1>
-                <p class="text-gray-600 mb-6 text-center">Your all-in-one AI assistant for VLSI design analysis, optimization, and reporting.</p>
-
-                <!-- Tabbed Interface -->
-                <div class="flex border-b border-gray-200 mb-6">
-                    <button id="tab-qa" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
-                        <i class="fas fa-question-circle mr-2"></i>VLSI Q&A
-                    </button>
-                    <button id="tab-log" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
-                        <i class="fas fa-file-alt mr-2"></i>Log Analyzer
-                    </button>
-                    <button id="tab-code" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
-                        <i class="fas fa-code mr-2"></i>Code Optimizer
-                    </button>
-                    <button id="tab-report" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
-                        <i class="fas fa-chart-line mr-2"></i>Report Summarizer
-                    </button>
-                    <button id="tab-diagram" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
-                        <i class="fas fa-paint-brush mr-2"></i>Diagram Generator
-                    </button>
-                    <button id="tab-files" class="tab-button flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
-                        <i class="fas fa-folder mr-2"></i>Files
-                    </button>
+            <!-- Log Analyzer -->
+            <div id="panel-log" class="tab-panel hidden">
+                <div class="tab-description">Paste your VLSI tool log. Get a simple breakdown of errors, warnings, plus actionable fixes. Add extra context via attachments or speech if needed.</div>
+                <textarea id="logInput" rows="7" class="w-full p-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg mb-2"></textarea>
+                <input type="file" id="logFileInput" class="file-input" accept="image/*,.pdf">
+                <div class="flex items-center space-x-2 mb-4">
+                    <button id="logMicBtn" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm">🎤 Speak</button>
+                    <label for="logFileInput" class="bg-gray-100 border px-3 py-1 rounded-lg text-sm cursor-pointer">📁 Attach</label>
                 </div>
-
-                <!-- Content Panels -->
-                <div id="panel-qa" class="tab-panel">
-                    <p class="text-gray-600 mb-4 text-center">Ask any question about VLSI design, physical design, or general electronics. **Input text, speak your question, or attach an image.**</p>
-                    <div class="flex items-center space-x-2">
-                        <textarea id="qaInput" rows="5" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                        <button id="qaMicButton" class="icon-button"><i class="fas fa-microphone text-blue-500 text-lg"></i></button>
-                        <button id="qaImageButton" class="icon-button"><i class="fas fa-image text-blue-500 text-lg"></i></button>
-                    </div>
-                    <input type="file" id="qaImageInput" class="hidden" accept="image/*">
-                    <div class="flex justify-center mt-6">
-                        <button id="submitQaButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                            Ask Question ✨
-                        </button>
-                    </div>
+                <div class="flex">
+                    <button id="analyzeLogButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Analyze Log ✨</button>
                 </div>
-
-                <div id="panel-log" class="tab-panel hidden">
-                    <p class="text-gray-600 mb-4 text-center">Paste your VLSI log data or attach a screenshot to get an expert analysis. **(Note: PDF files are not supported. Please copy and paste the text.)**</p>
-                    <div class="flex items-center space-x-2">
-                        <textarea id="logInput" rows="10" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                        <button id="logMicButton" class="icon-button"><i class="fas fa-microphone text-blue-500 text-lg"></i></button>
-                        <button id="logImageButton" class="icon-button"><i class="fas fa-image text-blue-500 text-lg"></i></button>
-                    </div>
-                    <input type="file" id="logImageInput" class="hidden" accept="image/*">
-                    <div class="flex justify-center mt-6">
-                        <button id="analyzeLogButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                            Analyze Log ✨
-                        </button>
-                    </div>
+            </div>
+            <!-- Code Gen/Optimizer-->
+            <div id="panel-code" class="tab-panel hidden">
+                <div class="tab-description">Paste Verilog/VHDL for analysis and optimization, or describe/design to generate fresh code. Attach diagrams/docs or speak your intent if desired.</div>
+                <textarea id="codeInput" rows="7" class="w-full p-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg mb-2"></textarea>
+                <input type="file" id="codeFileInput" class="file-input" accept="image/*,.pdf">
+                <div class="flex items-center space-x-2 mb-4">
+                    <button id="codeMicBtn" class="bg-purple-500 text-white px-3 py-1 rounded-lg text-sm">🎤 Speak</button>
+                    <label for="codeFileInput" class="bg-gray-100 border px-3 py-1 rounded-lg text-sm cursor-pointer">📁 Attach</label>
                 </div>
-
-                <div id="panel-code" class="tab-panel hidden">
-                    <p class="text-gray-600 mb-4 text-center">Paste your Verilog/VHDL code for optimization or describe a design to generate new code.</p>
-                    <div class="flex items-center space-x-2">
-                        <textarea id="codeInput" rows="10" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
-                        <button id="codeMicButton" class="icon-button"><i class="fas fa-microphone text-purple-500 text-lg"></i></button>
-                    </div>
-                    <div class="flex justify-center mt-6">
-                        <button id="processCodeButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
-                            Process Code ✨
-                        </button>
-                    </div>
+                <div class="flex space-x-2">
+                    <button id="optimizeCodeButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">Optimize Code ✨</button>
+                    <button id="generateCodeButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">Generate Code ✨</button>
                 </div>
-
-                <div id="panel-report" class="tab-panel hidden">
-                    <p class="text-gray-600 mb-4 text-center">Paste a design report or attach a screenshot for a concise summary of key metrics. **(Note: PDF files are not supported. Please copy and paste the text.)**</p>
-                    <div class="flex items-center space-x-2">
-                        <textarea id="reportInput" rows="10" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
-                        <button id="reportMicButton" class="icon-button"><i class="fas fa-microphone text-green-500 text-lg"></i></button>
-                        <button id="reportImageButton" class="icon-button"><i class="fas fa-image text-green-500 text-lg"></i></button>
-                    </div>
-                    <input type="file" id="reportImageInput" class="hidden" accept="image/*">
-                    <div class="flex justify-center mt-6">
-                        <button id="summarizeReportButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
-                            Summarize Report ✨
-                        </button>
-                    </div>
+            </div>
+            <!-- Report Summarizer -->
+            <div id="panel-report" class="tab-panel hidden">
+                <div class="tab-description">Paste a timing/power report or attach details. Receive concise, clear summaries with all crucial metrics and violations cited from their sources.</div>
+                <textarea id="reportInput" rows="7" class="w-full p-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg mb-2"></textarea>
+                <input type="file" id="reportFileInput" class="file-input" accept="image/*,.pdf">
+                <div class="flex items-center space-x-2 mb-4">
+                    <button id="reportMicBtn" class="bg-green-500 text-white px-3 py-1 rounded-lg text-sm">🎤 Speak</button>
+                    <label for="reportFileInput" class="bg-gray-100 border px-3 py-1 rounded-lg text-sm cursor-pointer">📁 Attach</label>
                 </div>
-
-                <!-- Diagram Generator Panel -->
-                <div id="panel-diagram" class="tab-panel hidden">
-                    <p class="text-gray-600 mb-4 text-center">Describe a diagram you want to generate. Be as specific as possible! **(Note: Image-to-image generation is not supported. Please describe the image you want)**</p>
-                    <div class="flex items-center space-x-2">
-                        <textarea id="diagramInput" rows="5" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
-                        <button id="diagramMicButton" class="icon-button"><i class="fas fa-microphone text-pink-500 text-lg"></i></button>
-                    </div>
-                    <div class="flex justify-center mt-6">
-                        <button id="generateDiagramButton" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50">
-                            Generate Diagram ✨
-                        </button>
-                    </div>
-                    <div id="diagramOutput" class="mt-8 text-center hidden">
-                        <img id="generatedImage" src="" alt="Generated Diagram" class="max-w-full h-auto rounded-lg shadow-md mx-auto" />
-                    </div>
+                <div class="flex">
+                    <button id="summarizeReportButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">Summarize Report ✨</button>
                 </div>
-
-                <!-- New Files Panel -->
-                <div id="panel-files" class="tab-panel hidden">
-                    <p class="text-gray-600 mb-4 text-center">Manage all your uploaded VLSI documents here. You can attach a file and then refer to it in other tabs.</p>
-                    <div class="flex justify-center items-center mb-6">
-                        <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                            <input type="file" id="addFile" class="hidden" multiple>
-                            <i class="fas fa-plus mr-2"></i> Add New File
-                        </label>
-                    </div>
-                    <div id="fileListContainer" class="mt-4 p-4 rounded-lg bg-gray-100 border border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">My Files</h3>
-                        <ul id="fileList" class="space-y-2">
-                            <!-- Files will be added here dynamically -->
-                        </ul>
-                        <p id="noFilesMessage" class="text-gray-500 italic text-sm mt-2">No files added yet.</p>
-                    </div>
+            </div>
+            <!-- Diagram Generator -->
+            <div id="panel-diagram" class="tab-panel hidden">
+                <div class="tab-description">Describe or upload a VLSI block/circuit diagram. The assistant generates or explains diagrams to help your understanding.</div>
+                <textarea id="diagramInput" rows="5" class="w-full p-3 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg mb-2"></textarea>
+                <input type="file" id="diagramFileInput" class="file-input" accept="image/*,.pdf">
+                <div class="flex items-center space-x-2 mb-4">
+                    <button id="diagramMicBtn" class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-sm">🎤 Speak</button>
+                    <label for="diagramFileInput" class="bg-gray-100 border px-3 py-1 rounded-lg text-sm cursor-pointer">📁 Attach</label>
                 </div>
-
-                <!-- Help Panel -->
-                <div id="panel-help" class="tab-panel hidden">
-                    <p class="text-gray-600 mb-4 text-center">Ask me a question about how to use this website!</p>
-                    <div class="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 mb-4">
-                        <textarea id="helpInput" rows="3" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"></textarea>
-                        <button id="askHelpButton" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50 flex-shrink-0">
-                            Ask Help ✨
-                        </button>
-                    </div>
-                    <div id="helpOutput" class="mt-4 p-4 rounded-lg bg-gray-100 border border-gray-200 hidden"></div>
+                <div class="flex">
+                    <button id="diagramGenBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50">Generate Diagram ✨</button>
                 </div>
-
-                <!-- Contact Panel -->
-                <div id="panel-contact" class="tab-panel hidden text-center p-8">
-                    <h2 class="text-gray-800 text-lg font-medium mb-4">Professional Queries</h2>
-                    <p class="text-gray-600 mb-4">For professional inquiries, collaborations, or detailed feedback, please contact the VLSI Assistant Team at the following email address:</p>
-                    <p class="text-blue-600 font-semibold text-xl">
-                        <a href="mailto:apranesh03@gmail.com" class="hover:underline">apranesh03@gmail.com</a>
-                    </p>
+            </div>
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="hidden flex items-center justify-center space-x-2 text-gray-600 mb-6">
+                <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Analyzing...</span>
+            </div>
+            <!-- Result Block -->
+            <div id="resultContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Analysis Result</h2>
+                <div id="analysisOutput" class="prose max-w-none text-gray-700 leading-relaxed"></div>
+            </div>
+            <!-- Help Popup -->
+            <div id="helpPopup" class="hidden fixed bottom-12 left-24 bg-white p-6 rounded-lg shadow-2xl border border-gray-300 max-w-xs z-50">
+                <h3 class="text-lg font-bold mb-2 text-blue-800">Help</h3>
+                <ul class="list-disc text-sm pl-4 text-gray-700">
+                    <li>Switch tabs left for Concept, Logs, Code, Reports, Diagrams</li>
+                    <li>Attach files or speak on any tab for quick input</li>
+                    <li>Click any chat to restore prior answer—history saved for your session</li>
+                    <li>Each answer includes its source website for full credibility</li>
+                    <li>Contact below for further assistance</li>
+                </ul>
+                <div class="mt-2 text-right">
+                    <button id="closeHelpBtn" class="bg-blue-200 text-blue-700 text-sm px-2 py-1 rounded">Close</button>
                 </div>
-
-                <!-- Loading and Result Containers -->
-                <div id="loadingIndicator" class="hidden flex items-center justify-center space-x-2 text-gray-600 mb-6">
-                    <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Analyzing...</span>
+            </div>
+            <!-- Contact Popup -->
+            <div id="contactPopup" class="hidden fixed bottom-12 left-44 bg-white p-6 rounded-lg shadow-2xl border border-gray-300 max-w-xs z-50">
+                <h3 class="text-lg font-bold mb-2 text-green-800">Contact</h3>
+                <div class="text-sm text-gray-700">
+                    <div><span class="font-semibold">Name:</span> Rahul Deshpande</div>
+                    <div><span class="font-semibold">Email:</span> rahul.deshpande@vlsitech.com</div>
+                    <div class="mt-2 text-xs italic">All queries handled professionally by our VLSI support team.</div>
                 </div>
-
-                <div id="resultContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Analysis Result</h2>
-                    <div id="analysisOutput" class="prose max-w-none text-gray-700 leading-relaxed"></div>
-                    <div id="sourceLinks" class="mt-4 text-sm text-gray-500"></div>
-                    <div class="flex space-x-4 mt-4">
-                        <button id="copyButton" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-copy mr-2"></i>Copy to Clipboard
-                        </button>
-                        <button id="listenButton" class="bg-blue-200 hover:bg-blue-300 text-blue-700 font-bold py-2 px-4 rounded-lg transition-colors duration-200">
-                            <i class="fas fa-volume-up mr-2"></i>Listen to Answer
-                        </button>
-                    </div>
+                <div class="mt-2 text-right">
+                    <button id="closeContactBtn" class="bg-green-200 text-green-700 text-sm px-2 py-1 rounded">Close</button>
                 </div>
             </div>
         </div>
     </div>
+    <script>
+        // Live Background
+        function animateBalls() {
+            const canvas = document.getElementById('liveBg');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let w = window.innerWidth, h = window.innerHeight;
+            canvas.width = w; canvas.height = h;
 
-    <!-- Firebase SDK Imports -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { v4 as uuidv4 } from "https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/esm-browser/index.js";
-
-        // Firebase Setup
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        let userId;
-        let activeChatId = null;
-        let isAuthReady = false;
-
-        const tabs = document.querySelectorAll('.tab-button');
-        const panels = document.querySelectorAll('.tab-panel');
-        const messageBox = document.getElementById('messageBox');
-        const qaInput = document.getElementById('qaInput');
-        const logInput = document.getElementById('logInput');
-        const codeInput = document.getElementById('codeInput');
-        const reportInput = document.getElementById('reportInput');
-        const diagramInput = document.getElementById('diagramInput');
-        const helpInput = document.getElementById('helpInput');
-        const helpOutput = document.getElementById('helpOutput');
-        const diagramOutput = document.getElementById('diagramOutput');
-        const generatedImage = document.getElementById('generatedImage');
-        const analyzeLogButton = document.getElementById('analyzeLogButton');
-        const processCodeButton = document.getElementById('processCodeButton');
-        const summarizeReportButton = document.getElementById('summarizeReportButton');
-        const submitQaButton = document.getElementById('submitQaButton');
-        const askHelpButton = document.getElementById('askHelpButton');
-        const generateDiagramButton = document.getElementById('generateDiagramButton');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const resultContainer = document.getElementById('resultContainer');
-        const analysisOutput = document.getElementById('analysisOutput');
-        const sourceLinks = document.getElementById('sourceLinks');
-        const newChatButton = document.getElementById('newChatButton');
-        const chatHistoryList = document.getElementById('chatHistoryList');
-        const copyButton = document.getElementById('copyButton');
-        const listenButton = document.getElementById('listenButton');
-        const addFileButton = document.getElementById('addFile');
-        const fileList = document.getElementById('fileList');
-        const noFilesMessage = document.getElementById('noFilesMessage');
-
-        // Speech and Image input buttons
-        const qaMicButton = document.getElementById('qaMicButton');
-        const qaImageButton = document.getElementById('qaImageButton');
-        const qaImageInput = document.getElementById('qaImageInput');
-        const logMicButton = document.getElementById('logMicButton');
-        const logImageButton = document.getElementById('logImageButton');
-        const logImageInput = document.getElementById('logImageInput');
-        const codeMicButton = document.getElementById('codeMicButton');
-        const reportMicButton = document.getElementById('reportMicButton');
-        const reportImageButton = document.getElementById('reportImageButton');
-        const reportImageInput = document.getElementById('reportImageInput');
-        const diagramMicButton = document.getElementById('diagramMicButton');
-
-        function showMessage(message, type = 'error') {
-            messageBox.textContent = message;
-            messageBox.className = `message-box show ${type === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
-            setTimeout(() => {
-                messageBox.classList.remove('show');
-            }, 5000);
-        }
-
-        function switchTab(targetId) {
-            tabs.forEach(tab => tab.classList.remove('active'));
-            panels.forEach(panel => panel.classList.add('hidden'));
-
-            const targetTab = document.getElementById(`tab-${targetId}`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-            const targetPanel = document.getElementById(`panel-${targetId}`);
-            if (targetPanel) {
-                targetPanel.classList.remove('hidden');
-            }
-        }
-
-        function getChatCollectionRef() {
-            return collection(db, `artifacts/${appId}/users/${userId}/chats`);
-        }
-        
-        function renderChatHistory(chats) {
-            chatHistoryList.innerHTML = '';
-            chats.forEach(chat => {
-                const li = document.createElement('li');
-                li.className = `p-3 rounded-lg cursor-pointer transition-colors duration-150 hover:bg-gray-200 truncate ${chat.id === activeChatId ? 'bg-blue-100 text-blue-800 font-medium' : 'bg-gray-100 text-gray-700'}`;
-                li.textContent = chat.query.substring(0, 30) + (chat.query.length > 30 ? '...' : '');
-                li.dataset.chatId = chat.id;
-                li.addEventListener('click', () => {
-                    activeChatId = chat.id;
-                    renderChatHistory(chats);
-                    displayChat(chat);
+            let balls = [];
+            const colors = [
+                [255, 99, 71],   // red
+                [65, 105, 225],  // blue
+                [60, 179, 113],  // green
+                [255, 168, 0],   // yellow
+                [148, 0, 211],   // purple
+            ];
+            // Ball count and config
+            for (let i = 0; i < 8; i++) {
+                balls.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: 60 + Math.random() * 50,
+                    c: colors[i % colors.length],
+                    dx: 2 + Math.random() * 2,
+                    dy: 2 + Math.random() * 2,
+                    hue: Math.random() * 360
                 });
-                chatHistoryList.appendChild(li);
-            });
-        }
-
-        async function saveChat(query, response, sources) {
-            if (!userId) return;
-            const chatRef = getChatCollectionRef();
-            const newChat = {
-                query: query,
-                response: response,
-                sources: sources,
-                timestamp: Date.now()
-            };
-            try {
-                const docRef = await addDoc(chatRef, newChat);
-                activeChatId = docRef.id;
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                showMessage("Failed to save chat history.");
-            }
-        }
-
-        function displayChat(chat) {
-            resultContainer.classList.remove('hidden');
-            analysisOutput.innerHTML = marked.parse(chat.response);
-            sourceLinks.innerHTML = chat.sources.map(source => `<a href="${source.uri}" target="_blank" class="text-blue-600 hover:underline">${source.title}</a>`).join('<br>');
-            if (chat.sources.length > 0) {
-                sourceLinks.innerHTML = 'Source(s): ' + sourceLinks.innerHTML;
-            }
-        }
-
-        async function callGemini(systemPrompt, userQuery, useGrounding = false, imageData = null, outputElement = analysisOutput, resultContainerElement = resultContainer) {
-            loadingIndicator.classList.remove('hidden');
-            resultContainerElement.classList.add('hidden');
-            outputElement.innerHTML = '';
-            if (resultContainerElement === resultContainer) {
-                sourceLinks.innerHTML = '';
             }
 
-            try {
-                const apiKey = "AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                
-                let parts = [];
-                if (userQuery) parts.push({ text: userQuery });
-                if (imageData) parts.push({ inlineData: { mimeType: "image/png", data: imageData.split(',')[1] } });
-                
-                const payload = {
-                    contents: [{ parts: parts }],
-                    systemInstruction: {
-                        parts: [{ text: systemPrompt }]
-                    },
-                    tools: useGrounding ? [{ google_search: {} }] : undefined,
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                for (let b of balls) {
+                    b.x += b.dx * (Math.random() < 0.5 ? 1 : -1);
+                    b.y += b.dy * (Math.random() < 0.5 ? 1 : -1);
+                    b.hue += .4;
+                    if (b.x < 0 || b.x > w) b.dx *= -1;
+                    if (b.y < 0 || b.y > h) b.dy *= -1;
+                    ctx.save();
+                    ctx.globalAlpha = 0.44;
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsl(${b.hue % 360},56%,${85-(b.r/2)%30}%)`;
+                    ctx.fill();
+                    ctx.restore();
                 }
-
-                const result = await response.json();
-                const candidate = result.candidates?.[0];
-
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const responseText = candidate.content.parts[0].text;
-                    const groundingMetadata = candidate.groundingMetadata;
-                    let sources = [];
-
-                    if (useGrounding && groundingMetadata && groundingMetadata.groundingAttributions) {
-                        sources = groundingMetadata.groundingAttributions
-                            .map(attribution => ({
-                                uri: attribution.web?.uri,
-                                title: attribution.web?.title,
-                            }))
-                            .filter(source => source.uri && source.title);
-                    }
-                    
-                    outputElement.innerHTML = marked.parse(responseText);
-                    resultContainerElement.classList.remove('hidden');
-                    if (resultContainerElement === resultContainer) {
-                        sourceLinks.innerHTML = sources.map(source => `<a href="${source.uri}" target="_blank" class="text-blue-600 hover:underline">${source.title}</a>`).join('<br>');
-                        if (sources.length > 0) {
-                            sourceLinks.innerHTML = 'Source(s): ' + sourceLinks.innerHTML;
-                        }
-                        saveChat(userQuery, responseText, sources);
-                    }
-                } else {
-                    showMessage('No analysis could be generated. Please try again.');
-                }
-            } catch (error) {
-                console.error('An error occurred:', error);
-                showMessage(`An error occurred: ${error.message}`);
-            } finally {
-                loadingIndicator.classList.add('hidden');
             }
+            function animate() {
+                draw();
+                requestAnimationFrame(animate);
+            }
+            animate();
         }
+        window.addEventListener('resize', animateBalls);
+        window.addEventListener('DOMContentLoaded', animateBalls);
 
-        async function generateImage() {
-            const prompt = diagramInput.value.trim();
-            if (prompt === '') {
-                showMessage('Please enter a description for the diagram.', 'info');
-                return;
-            }
-
-            generateDiagramButton.disabled = true;
-            generateDiagramButton.innerHTML = 'Generating...';
-            diagramOutput.classList.add('hidden');
-            
-            try {
-                const apiKey = "AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-
-                const payload = {
-                    instances: {
-                        prompt: prompt,
-                    },
-                    parameters: {
-                        sampleCount: 1
-                    }
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
-
-                if (base64Data) {
-                    generatedImage.src = `data:image/png;base64,${base64Data}`;
-                    diagramOutput.classList.remove('hidden');
-                    showMessage('Diagram generated successfully!', 'success');
-                } else {
-                    showMessage('Failed to generate diagram. Please try again.');
-                }
-
-            } catch (error) {
-                console.error('Image generation error:', error);
-                showMessage(`An error occurred during image generation: ${error.message}`);
-            } finally {
-                generateDiagramButton.disabled = false;
-                generateDiagramButton.innerHTML = 'Generate Diagram ✨';
-            }
-        }
-
-        async function playAudio(text) {
-            if (!text) {
-                showMessage('No text to play.', 'info');
-                return;
-            }
-            
-            listenButton.disabled = true;
-            listenButton.innerHTML = '<i class="fas fa-spinner animate-spin mr-2"></i>Loading...';
-            
-            try {
-                const apiKey = "AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: text }] }],
-                    generationConfig: {
-                        responseModalities: ["AUDIO"],
-                        speechConfig: {
-                            voiceConfig: {
-                                prebuiltVoiceConfig: { voiceName: "Kore" }
-                            }
-                        }
-                    },
-                    model: "gemini-2.5-flash-preview-tts"
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
-
-                if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
-                    const pcmData = base64ToArrayBuffer(audioData);
-                    const pcm16 = new Int16Array(pcmData);
-                    const wavBlob = pcmToWav(pcm16, sampleRate);
-                    const audioUrl = URL.createObjectURL(wavBlob);
-                    
-                    const audio = new Audio(audioUrl);
-                    audio.play();
-                } else {
-                    throw new Error("Invalid audio data from API.");
-                }
-
-            } catch (error) {
-                console.error('TTS error:', error);
-                showMessage(`An error occurred during text-to-speech: ${error.message}`);
-            } finally {
-                listenButton.disabled = false;
-                listenButton.innerHTML = '<i class="fas fa-volume-up mr-2"></i>Listen to Answer';
-            }
-        }
-        
-        function base64ToArrayBuffer(base64) {
-            const binaryString = window.atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        function pcmToWav(pcmData, sampleRate) {
-            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
-            const view = new DataView(buffer);
-
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + pcmData.length * 2, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, pcmData.length * 2, true);
-            
-            let offset = 44;
-            for (let i = 0; i < pcmData.length; i++) {
-                view.setInt16(offset, pcmData[i], true);
-                offset += 2;
-            }
-            
-            return new Blob([view], { type: 'audio/wav' });
-        }
-
-        function writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-        }
-
-        function startSpeechRecognition(inputElement) {
-            if (!('webkitSpeechRecognition' in window)) {
-                showMessage('Speech recognition is not supported in your browser.', 'info');
-                return;
-            }
-            const recognition = new webkitSpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
-
-            recognition.onstart = () => {
-                inputElement.placeholder = "Listening...";
-                inputElement.classList.add('focus:ring-red-500');
-            };
-
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                inputElement.value = transcript;
-            };
-
-            recognition.onend = () => {
-                inputElement.placeholder = "";
-                inputElement.classList.remove('focus:ring-red-500');
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                showMessage(`Speech recognition error: ${event.error}`, 'error');
-            };
-
-            recognition.start();
-        }
-
-        function handleImageUpload(fileInput, inputElement) {
-            fileInput.click();
-            fileInput.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        inputElement.dataset.imageData = e.target.result;
-                        showMessage('Image attached! You can now ask a question about it.', 'success');
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    showMessage('Please select an image file.', 'error');
-                }
-            };
-        }
-
-
-        // Background Animation Logic
-        const canvas = document.getElementById('backgroundCanvas');
-        const ctx = canvas.getContext('2d');
-
-        let particlesArray;
-
-        // Particle Class
-        class Particle {
-            constructor(x, y, directionX, directionY, size, color) {
-                this.x = x;
-                this.y = y;
-                this.directionX = directionX;
-                this.directionY = directionY;
-                this.size = size;
-                this.color = color;
-                this.hue = Math.random() * 360; // Initial hue
-                this.colorChangeSpeed = 0.5;
-            }
-
-            // Method to draw the particle
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                ctx.fillStyle = `hsl(${this.hue}, 100%, 75%)`;
-                ctx.fill();
-            }
-
-            // Method to update particle position and color
-            update() {
-                // Check for collisions with canvas edges
-                if (this.x + this.size > canvas.width || this.x - this.size < 0) {
-                    this.directionX = -this.directionX;
-                }
-                if (this.y + this.size > canvas.height || this.y - this.size < 0) {
-                    this.directionY = -this.directionY;
-                }
-
-                // Move particle
-                this.x += this.directionX;
-                this.y += this.directionY;
-
-                // Change color
-                this.hue += this.colorChangeSpeed;
-                if (this.hue >= 360) {
-                    this.hue = 0;
-                }
-
-                this.draw();
-            }
-        }
-
-        // Function to average the hues of all particles
-        function getAverageParticleHue() {
-            if (particlesArray.length === 0) {
-                return 0;
-            }
-
-            let totalHue = 0;
-            particlesArray.forEach(particle => {
-                totalHue += particle.hue;
-            });
-
-            return totalHue / particlesArray.length;
-        }
-
-        // Initialize particles
-        function init() {
-            particlesArray = [];
-            const numberOfParticles = (canvas.height * canvas.width) / 25000;
-            for (let i = 0; i < numberOfParticles; i++) {
-                const size = Math.random() * 30 + 15; // Bigger balls
-                const x = Math.random() * (canvas.width - size * 2) + size;
-                const y = Math.random() * (canvas.height - size * 2) + size;
-                const directionX = Math.random() * 0.4 - 0.2;
-                const directionY = Math.random() * 0.4 - 0.2;
-                const color = 'white'; // Color will be dynamically set by hue
-                particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
-            }
-        }
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            // Get the average hue of the particles for the background color
-            const avgHue = getAverageParticleHue();
-            // Creamish white background with a lively touch
-            ctx.fillStyle = `hsl(${avgHue}, 100%, 95%)`; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            for (let i = 0; i < particlesArray.length; i++) {
-                particlesArray[i].update();
-            }
-        }
-        
-        // Handle window resizing
-        function handleResize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            init(); // Re-initialize particles on resize
-        }
-        window.addEventListener('resize', handleResize);
-        handleResize();
-        animate();
-
-
+        // Main App JS
         document.addEventListener('DOMContentLoaded', () => {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    isAuthReady = true;
-                    const chatQuery = query(getChatCollectionRef(), orderBy('timestamp', 'desc'));
-                    onSnapshot(chatQuery, (snapshot) => {
-                        const chats = [];
-                        snapshot.forEach((doc) => {
-                            chats.push({ id: doc.id, ...doc.data() });
-                        });
-                        renderChatHistory(chats);
-                    });
-                } else {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined') {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (error) {
-                        console.error('Firebase Auth Error:', error);
-                        showMessage("Failed to authenticate. Please try refreshing.");
-                    }
-                }
-            });
-
+            // Tabs logic
+            const tabs = document.querySelectorAll('.tab-button');
+            const panels = document.querySelectorAll('.tab-panel');
+            function switchTab(panelId) {
+                tabs.forEach(tab => tab.classList.remove('border-blue-600'));
+                panels.forEach(panel => panel.classList.add('hidden'));
+                document.getElementById('tab-' + panelId).classList.add('border-blue-600');
+                document.getElementById('panel-' + panelId).classList.remove('hidden');
+            }
             tabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    const targetId = e.target.id.replace('tab-', '');
-                    switchTab(targetId);
+                tab.addEventListener('click', e => switchTab(e.target.id.replace('tab-','')));
+            });
+            switchTab('vlsi');
+
+            // Message box
+            const messageBox = document.getElementById('messageBox');
+            function showMessage(msg, type='error') {
+                messageBox.textContent = msg;
+                messageBox.className = 'message-box show ' + (type==='error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800');
+                setTimeout(() => { messageBox.classList.remove('show'); }, 5300);
+            }
+
+            // Chat History
+            const chatHistoryList = document.getElementById('chatHistoryList');
+            let chatHistory = JSON.parse(localStorage.getItem('vlsiChatHistory') || "[]");
+            function updateChatHistory() {
+                chatHistoryList.innerHTML = '';
+                chatHistory.forEach((item, idx) => {
+                    const li = document.createElement('li');
+                    li.className = "cursor-pointer text-xs py-2 px-3 rounded hover:bg-gray-100 mb-1 border-b";
+                    li.textContent = item.title.length > 30 ? item.title.slice(0, 28) + '...' : item.title;
+                    li.addEventListener('click', () => loadChat(idx));
+                    chatHistoryList.appendChild(li);
                 });
-            });
+            }
+            function saveChat(title, answerHtml, sources=[]) {
+                chatHistory.push({ title, answerHtml, sources, ts: Date.now() });
+                localStorage.setItem('vlsiChatHistory', JSON.stringify(chatHistory));
+                updateChatHistory();
+            }
+            function loadChat(idx) {
+                const chat = chatHistory[idx];
+                if (!chat) return;
+                document.getElementById('analysisOutput').innerHTML = chat.answerHtml;
+                document.getElementById('resultContainer').classList.remove('hidden');
+            }
+            updateChatHistory();
 
-            newChatButton.addEventListener('click', () => {
-                activeChatId = null;
-                qaInput.value = '';
-                logInput.value = '';
-                codeInput.value = '';
-                reportInput.value = '';
-                diagramInput.value = '';
-                resultContainer.classList.add('hidden');
-                helpOutput.classList.add('hidden');
-                diagramOutput.classList.add('hidden');
-                switchTab('qa');
-                const chatItems = chatHistoryList.querySelectorAll('li');
-                chatItems.forEach(item => item.classList.remove('bg-blue-100', 'text-blue-800', 'font-medium'));
-            });
+            // Help & Contact Popups
+            document.getElementById('helpTab').onclick = () => { document.getElementById('helpPopup').classList.remove('hidden'); };
+            document.getElementById('contactTab').onclick = () => { document.getElementById('contactPopup').classList.remove('hidden'); };
+            document.getElementById('closeHelpBtn').onclick = () => { document.getElementById('helpPopup').classList.add('hidden'); };
+            document.getElementById('closeContactBtn').onclick = () => { document.getElementById('contactPopup').classList.add('hidden'); };
 
-            copyButton.addEventListener('click', () => {
-                const textToCopy = analysisOutput.innerText;
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(textToCopy).then(() => {
-                        showMessage('Copied to clipboard!', 'success');
-                    }).catch(err => {
-                        console.error('Could not copy text: ', err);
-                        showMessage('Failed to copy text.');
+            // Speech Input (Voice)
+            function voiceToTextarea(btn, textarea) {
+                if (!('webkitSpeechRecognition' in window)) {
+                    showMessage("Speech recognition not available in this browser");
+                    return;
+                }
+                const recognition = new webkitSpeechRecognition();
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                btn.textContent = '🎤 Listening...';
+                recognition.start();
+                recognition.onresult = (evt) => {
+                    textarea.value = (textarea.value ? textarea.value + " " : "") + evt.results.transcript;
+                    btn.textContent = '🎤 Speak';
+                };
+                recognition.onerror = () => { btn.textContent = '🎤 Speak'; };
+                recognition.onend = () => { btn.textContent = '🎤 Speak'; };
+            }
+            document.getElementById('vlsiMicBtn').onclick = () => voiceToTextarea(document.getElementById('vlsiMicBtn'), document.getElementById('vlsiInput'));
+            document.getElementById('logMicBtn').onclick = () => voiceToTextarea(document.getElementById('logMicBtn'), document.getElementById('logInput'));
+            document.getElementById('codeMicBtn').onclick = () => voiceToTextarea(document.getElementById('codeMicBtn'), document.getElementById('codeInput'));
+            document.getElementById('reportMicBtn').onclick = () => voiceToTextarea(document.getElementById('reportMicBtn'), document.getElementById('reportInput'));
+            document.getElementById('diagramMicBtn').onclick = () => voiceToTextarea(document.getElementById('diagramMicBtn'), document.getElementById('diagramInput'));
+
+            // File Attachments
+            function fileToTextarea(inputId, textareaId) {
+                const input = document.getElementById(inputId);
+                input.onchange = function() {
+                    const file = input.files;
+                    if (file && file.type.includes('image')) {
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                            textareaId.value += `\n[Image inserted]\n`;
+                        };
+                        reader.readAsDataURL(file);
+                    } else if (file && file.type === 'application/pdf') {
+                        textareaId.value += `\n[PDF inserted]\nFilename: ${file.name}`;
+                    }
+                };
+            }
+            fileToTextarea('vlsiFileInput', document.getElementById('vlsiInput'));
+            fileToTextarea('logFileInput', document.getElementById('logInput'));
+            fileToTextarea('codeFileInput', document.getElementById('codeInput'));
+            fileToTextarea('reportFileInput', document.getElementById('reportInput'));
+            fileToTextarea('diagramFileInput', document.getElementById('diagramInput'));
+
+            // API Call Gemini (replace with own backend if preferred)
+            async function callGemini(systemPrompt, userQuery, mode='generic') {
+                document.getElementById('loadingIndicator').classList.remove('hidden');
+                document.getElementById('resultContainer').classList.add('hidden');
+                document.getElementById('analysisOutput').innerHTML = '';
+                try {
+                    const apiKey = "AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: {
+                            parts: [{ text: systemPrompt }]
+                        },
+                    };
+                    const response = await fetch(apiUrl, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
                     });
-                } else {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = textToCopy;
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    try {
-                        document.execCommand('copy');
-                        showMessage('Copied to clipboard!', 'success');
-                    } catch (err) {
-                        console.error('Could not copy text: ', err);
-                        showMessage('Failed to copy text.');
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const result = await response.json();
+                    const candidate = result.candidates?.;
+                    let sources = [];
+                    let answerText = '';
+                    if (candidate && candidate.content?.parts?.?.text) {
+                        answerText = candidate.content.parts.text;
+                        // Look for explicit 'Source:' patterns
+                        let sourceMatch = answerText.match(/Source:\s*\[(.*?)\]/gi);
+                        if (sourceMatch) {
+                            sources = sourceMatch.map(x => x.replace('Source:','').replace('[','').replace(']',''));
+                        }
+                        let answerHtml = marked.parse(answerText);
+                        if (sources.length) {
+                            answerHtml += `<div class="mt-3 text-xs text-gray-500">Sources: ${sources.map(s=>`<a href="${s.trim()}" target="_blank" class="text-blue-700 underline">${s.trim()}</a>`).join(', ')}</div>`;
+                        }
+                        document.getElementById('analysisOutput').innerHTML = answerHtml;
+                        document.getElementById('resultContainer').classList.remove('hidden');
+                        saveChat(userQuery, answerHtml, sources);
+                    } else {
+                        showMessage('No analysis could be generated. Please try again.');
                     }
-                    document.body.removeChild(textArea);
+                } catch (error) {
+                    showMessage(`An error occurred: ${error.message}`);
+                } finally {
+                    document.getElementById('loadingIndicator').classList.add('hidden');
                 }
-            });
+            }
 
-            listenButton.addEventListener('click', () => {
-                const textToSpeak = analysisOutput.innerText;
-                playAudio(textToSpeak);
-            });
-            
-            switchTab('qa');
-
-            // Set up event listeners for speech and image buttons
-            qaMicButton.addEventListener('click', () => startSpeechRecognition(qaInput));
-            qaImageButton.addEventListener('click', () => handleImageUpload(qaImageInput, qaInput));
-            logMicButton.addEventListener('click', () => startSpeechRecognition(logInput));
-            logImageButton.addEventListener('click', () => handleImageUpload(logImageInput, logInput));
-            codeMicButton.addEventListener('click', () => startSpeechRecognition(codeInput));
-            reportMicButton.addEventListener('click', () => startSpeechRecognition(reportInput));
-            reportImageButton.addEventListener('click', () => handleImageUpload(reportImageInput, reportInput));
-            diagramMicButton.addEventListener('click', () => startSpeechRecognition(diagramInput));
-
-            submitQaButton.addEventListener('click', () => {
-                const query = qaInput.value.trim();
-                const imageData = qaInput.dataset.imageData;
-                if (query === '' && !imageData) {
-                    showMessage('Please enter a question or attach an image.', 'info');
-                    return;
-                }
-                const systemPrompt = `You are a world-class VLSI professor. You will answer a question about VLSI design, physical design, or general electronics. Provide a clear, friendly, and easy-to-understand answer. For simple questions, use a conversational tone and bullet points. For complex questions, provide a more descriptive, well-structured response. Always use markdown for formatting.`;
-                callGemini(systemPrompt, query, true, imageData);
-                qaInput.dataset.imageData = '';
-            });
-
-            analyzeLogButton.addEventListener('click', () => {
-                const logData = logInput.value.trim();
-                const imageData = logInput.dataset.imageData;
-                if (logData === '' && !imageData) {
-                    showMessage('Please paste a log or attach an image to analyze.', 'info');
-                    return;
-                }
-                const systemPrompt = `You are a world-class VLSI expert. You will analyze a VLSI log file or an image of a log file and provide a simple, easy-to-understand explanation of any errors or warnings. Provide a suggested fix for each issue you identify. Format your response using markdown for clear headings and bullet points.`;
-                callGemini(systemPrompt, logData, false, imageData);
-                logInput.dataset.imageData = '';
-            });
-
-            processCodeButton.addEventListener('click', () => {
-                const codeData = codeInput.value.trim();
-                if (codeData === '') {
-                    showMessage('Please paste code or describe a design to process.', 'info');
-                    return;
-                }
-                // Simple check to determine if the input is likely code or a description
-                const isCode = codeData.includes('module') || codeData.includes('entity') || codeData.includes('logic');
-                const systemPrompt = isCode
-                    ? `You are a world-class VLSI digital logic design and synthesis expert. You will analyze the provided Verilog or VHDL code and provide suggestions for optimizing it for area, power, or timing. Explain your suggestions clearly and provide an example of the optimized code.`
-                    : `You are a world-class VLSI digital logic design and synthesis expert. You will generate a simple, well-commented Verilog code snippet for the described design.`;
-                callGemini(systemPrompt, codeData, false);
-            });
-
-            summarizeReportButton.addEventListener('click', () => {
-                const reportData = reportInput.value.trim();
-                const imageData = reportInput.dataset.imageData;
-                if (reportData === '' && !imageData) {
-                    showMessage('Please paste a report or attach an image to summarize.', 'info');
-                    return;
-                }
-                const systemPrompt = `You are a world-class VLSI design verification and sign-off expert. You will summarize the provided design report, highlighting the most important metrics, any critical warnings or violations, and the overall pass/fail status. Keep the summary concise and professional.`;
-                callGemini(systemPrompt, reportData, false, imageData);
-                reportInput.dataset.imageData = '';
-            });
-
-            generateDiagramButton.addEventListener('click', generateImage);
-
-            askHelpButton.addEventListener('click', () => {
-                const helpQuery = helpInput.value.trim();
-                if (helpQuery === '') {
-                    showMessage('Please enter a question about the website.', 'info');
-                    return;
-                }
-                const systemPrompt = `You are a helpful and friendly chatbot assistant for the VLSI AI Assistant website. You will answer questions related to the website's features, how to use its different tools, and general information about the application. Do not provide information outside of the scope of this website.`;
-                helpOutput.classList.remove('hidden');
-                helpOutput.innerHTML = 'Thinking...';
-                callGemini(systemPrompt, helpQuery, false, null, helpOutput, helpOutput);
-            });
-
-            // File management logic for the new Files tab
-            addFileButton.addEventListener('change', (e) => {
-                const files = e.target.files;
-                if (files.length > 0) {
-                    noFilesMessage.classList.add('hidden');
-                    for (const file of files) {
-                        const li = document.createElement('li');
-                        li.className = 'flex items-center space-x-2 p-2 bg-white rounded-lg shadow-sm';
-                        li.innerHTML = `
-                            <i class="fas fa-file-alt text-gray-500"></i>
-                            <span class="text-gray-700 truncate">${file.name}</span>
-                        `;
-                        fileList.appendChild(li);
-                    }
-                    showMessage(`${files.length} file(s) added successfully!`, 'success');
-                } else {
-                    showMessage('No file selected.', 'error');
-                }
-            });
+            // Button Actions
+            document.getElementById('vlsiSubmitBtn').onclick = () => {
+                const vlsiQ = document.getElementById('vlsiInput').value.trim();
+                if (!vlsiQ) { showMessage('Please ask a VLSI question!'); return; }
+                const sysPrompt = `You are a world-class VLSI teaching assistant. The user will ask a question about VLSI, DV, PD or related concepts, possibly uploading images/PDFs or speaking. Respond at a level suited to the question: for simple queries reply in point form; for complex, reply with rich explanation and formatted sections. Clearly cite your web sources.`;
+                callGemini(sysPrompt, vlsiQ, 'vlsi');
+            };
+            document.getElementById('analyzeLogButton').onclick = () => {
+                const logQ = document.getElementById('logInput').value.trim();
+                if (!logQ) { showMessage('Please paste a log to analyze.'); return;}
+                const sysPrompt = `You are a world-class VLSI log analysis expert. Analyze the log (with possible image/pdf attachments/context). Break down errors/warnings with simple explanations, and source each fix/diagnosis.`;
+                callGemini(sysPrompt, logQ, 'log');
+            };
+            document.getElementById('optimizeCodeButton').onclick = () => {
+                const codeQ = document.getElementById('codeInput').value.trim();
+                if (!codeQ) { showMessage('Paste VLSI code to optimize or describe intent.'); return;}
+                const sysPrompt = `You are a VLSI code optimization expert. Analyze the provided Verilog/VHDL/code intent, suggest area/power/timing improvements, and provide code changes. Cite synthesis/EDA sources for suggestions. For simple changes, show in bullet points.`;
+                callGemini(sysPrompt, codeQ, 'code-opt');
+            };
+            document.getElementById('generateCodeButton').onclick = () => {
+                const codeQ = document.getElementById('codeInput').value.trim();
+                if (!codeQ) { showMessage('Describe the circuit or logic to generate code.'); return;}
+                const sysPrompt = `You are a VLSI code generator. Generate optimized Verilog/VHDL for the user's design request (text/pasted/speech/attachment). Clearly explain the logic. Attribute any online design references.`;
+                callGemini(sysPrompt, codeQ, 'code-gen');
+            };
+            document.getElementById('summarizeReportButton').onclick = () => {
+                const reportQ = document.getElementById('reportInput').value.trim();
+                if (!reportQ) { showMessage('Paste a report for summary.'); return;}
+                const sysPrompt = `You are a professional VLSI verification and signoff expert. Summarize the timing/power/other report, highlighting top metrics, warnings, and pass/fail. Display source files/sites for every main detail.`;
+                callGemini(sysPrompt, reportQ, 'report');
+            };
+            document.getElementById('diagramGenBtn').onclick = () => {
+                const diagQ = document.getElementById('diagramInput').value.trim();
+                if (!diagQ) { showMessage('Describe or attach a diagram request.'); return;}
+                const sysPrompt = `You are a VLSI diagram assistant. For the user's block diagram request/input/attachment, generate or explain the diagram. Provide source citations for any technical references.`;
+                callGemini(sysPrompt, diagQ, 'diagram');
+            };
         });
+
     </script>
 </body>
 </html>
