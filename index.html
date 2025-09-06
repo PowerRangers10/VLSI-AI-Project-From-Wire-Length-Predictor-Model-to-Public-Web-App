@@ -118,6 +118,17 @@
           <hr class="my-3">
           <div id="resultOutput" class="prose max-w-none text-gray-800"></div>
         </div>
+
+        <!-- Help & Contact Section -->
+        <hr class="my-6">
+        <section class="glass rounded-xl p-4 mt-6 shadow-md">
+          <h2 class="text-lg font-semibold mb-2">Help & Contact</h2>
+          <p>If you face any issues or need help, contact:</p>
+          <ul class="list-disc ml-5 mt-2">
+            <li><strong>Author:</strong> Ashray Datta Pranesh Anegondi</li>
+            <li><strong>Email:</strong> <a href="mailto:apranesh03@gmail.com" class="text-blue-600">apranesh03@gmail.com</a></li>
+          </ul>
+        </section>
       </div>
     </main>
   </div>
@@ -125,12 +136,22 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <script>
-    // Background
+    // Background animation
     const canvas = document.getElementById('bgCanvas');
-    const ctx = canvas.getContext('2d'); let W,H; function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;} addEventListener('resize',resize); resize();
-    class Ball{constructor(){this.reset();} reset(){this.r=30+Math.random()*80;this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;this.h=Math.floor(Math.random()*360);this.s=60;this.l=60;} step(){this.x+=this.vx;this.y+=this.vy;if(this.x<-this.r)this.x=W+this.r;if(this.x>W+this.r)this.x=-this.r;if(this.y<-this.r)this.y=H+this.r;if(this.y>H+this.r)this.y=-this.r;} draw(){ctx.beginPath();const grd=ctx.createRadialGradient(this.x,this.y,this.r*0.1,this.x,this.y,this.r);grd.addColorStop(0,`hsla(${this.h},${this.s}%,${this.l}%,0.9)`);grd.addColorStop(1,`hsla(${this.h},${this.s}%,${this.l}%,0.15)`);ctx.fillStyle=grd;ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();}}
+    const ctx = canvas.getContext('2d'); 
+    let W,H; 
+    function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;} 
+    addEventListener('resize',resize); 
+    resize();
+    class Ball{
+      constructor(){this.reset();}
+      reset(){this.r=30+Math.random()*80;this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;this.h=Math.floor(Math.random()*360);this.s=60;this.l=60;}
+      step(){this.x+=this.vx;this.y+=this.vy;if(this.x<-this.r)this.x=W+this.r;if(this.x>W+this.r)this.x=-this.r;if(this.y<-this.r)this.y=H+this.r;if(this.y>H+this.r)this.y=-this.r;}
+      draw(){ctx.beginPath();const grd=ctx.createRadialGradient(this.x,this.y,this.r*0.1,this.x,this.y,this.r);grd.addColorStop(0,`hsla(${this.h},${this.s}%,${this.l}%,0.9)`);grd.addColorStop(1,`hsla(${this.h},${this.s}%,${this.l}%,0.15)`);ctx.fillStyle=grd;ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();}
+    }
     const balls = Array.from({length:6},()=>new Ball());
-    function animate(){ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(253,250,244,0.5)';ctx.fillRect(0,0,W,H);balls.forEach(b=>{b.step();b.draw();});requestAnimationFrame(animate);} animate();
+    function animate(){ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(253,250,244,0.5)';ctx.fillRect(0,0,W,H);balls.forEach(b=>{b.step();b.draw();});requestAnimationFrame(animate);} 
+    animate();
 
     // Tabs
     function selectTab(id){document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('bg-blue-50'));document.querySelector(`[data-tab="${id}"]`).classList.add('bg-blue-50');document.querySelectorAll('.tabPanel').forEach(p=>p.classList.add('hidden'));document.getElementById('panel-'+id).classList.remove('hidden');}
@@ -154,8 +175,8 @@
     // Save chat
     document.getElementById('saveChat').addEventListener('click',()=>{ const title=prompt('Title for this chat'); if(!title) return; const h=loadHistory(); h.push({title,output:document.getElementById('resultOutput').innerHTML,date:Date.now()}); saveHistory(h); renderHistory(); showMessage('Saved'); });
 
-    // Hidden API key
-    const API_KEY = 'AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo';
+    // OpenAI API key
+    const API_KEY = 'AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo'; // Replace with your OpenAI key
 
     async function askAI(prompt){
       try{
@@ -165,7 +186,13 @@
           body: JSON.stringify({ model:'gpt-4', messages:[{role:'user',content:prompt}], temperature:0.7 })
         });
         const data = await res.json();
-        return data.choices[0].message.content;
+        if(data?.choices && data.choices[0]?.message?.content){
+          return data.choices[0].message.content;
+        } else if(data?.error?.message){
+          return 'API Error: '+data.error.message;
+        } else {
+          return 'Unexpected response from API';
+        }
       }catch(e){ return 'Error: '+e.message; }
     }
 
