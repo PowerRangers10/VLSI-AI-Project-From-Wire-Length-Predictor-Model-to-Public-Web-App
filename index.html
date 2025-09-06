@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VLSI AI Assistant — Google API</title>
+  <title>VLSI AI Assistant — Live</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +15,7 @@
     .message-box.show{ display:block; }
     .left-width{ width: 320px; }
     #bgCanvas{ position:fixed; inset:0; z-index:-10; }
+    .file-thumb{ max-width:100%; max-height:140px; border-radius:6px; border:1px solid #eee; }
     .history-item{ cursor:pointer; }
     .tabPanel{ transition: all 0.3s ease; }
   </style>
@@ -38,15 +39,6 @@
         <button id="clearHistory" class="text-xs text-red-600">Clear</button>
       </div>
       <div id="chatHistory" class="mt-2 space-y-2 text-sm text-gray-700"></div>
-
-      <hr class="my-4">
-      <!-- Help & Contact -->
-      <h2 class="text-lg font-semibold mb-2">Help & Contact</h2>
-      <p>If you face any issues or need help, contact:</p>
-      <ul class="list-disc ml-5 mt-2">
-        <li><strong>Author:</strong> Ashray Datta Pranesh Anegondi</li>
-        <li><strong>Email:</strong> <a href="mailto:apranesh03@gmail.com" class="text-blue-600">apranesh03@gmail.com</a></li>
-      </ul>
     </aside>
 
     <!-- Main Content -->
@@ -74,6 +66,7 @@
         </nav>
 
         <div id="tabContent">
+          <!-- VLSI Q&A -->
           <section id="panel-vlsi" class="tabPanel">
             <textarea id="vlsiInput" rows="4" class="w-full p-3 border rounded-md" placeholder="Type your VLSI question..."></textarea>
             <div class="flex gap-2 mt-3">
@@ -81,6 +74,7 @@
             </div>
           </section>
 
+          <!-- Other panels -->
           <section id="panel-logs" class="tabPanel hidden">
             <textarea id="logInput" rows="8" class="w-full p-3 border rounded-md" placeholder="Paste VLSI logs here..."></textarea>
             <div class="flex gap-2 mt-3">
@@ -110,6 +104,7 @@
           </section>
         </div>
 
+        <!-- Result -->
         <div id="resultArea" class="mt-6 p-4 bg-gray-50 rounded-md border hidden">
           <div class="flex items-start justify-between">
             <div>
@@ -123,6 +118,17 @@
           <hr class="my-3">
           <div id="resultOutput" class="prose max-w-none text-gray-800"></div>
         </div>
+
+        <!-- Help & Contact Section -->
+        <hr class="my-6">
+        <section class="glass rounded-xl p-4 mt-6 shadow-md">
+          <h2 class="text-lg font-semibold mb-2">Help & Contact</h2>
+          <p>If you face any issues or need help, contact:</p>
+          <ul class="list-disc ml-5 mt-2">
+            <li><strong>Author:</strong> Ashray Datta Pranesh Anegondi</li>
+            <li><strong>Email:</strong> <a href="mailto:apranesh03@gmail.com" class="text-blue-600">apranesh03@gmail.com</a></li>
+          </ul>
+        </section>
       </div>
     </main>
   </div>
@@ -130,95 +136,76 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <script>
-    // Background balls
+    // Background animation
     const canvas = document.getElementById('bgCanvas');
-    const ctx = canvas.getContext('2d'); let W,H; function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;} addEventListener('resize',resize); resize();
-    class Ball{constructor(){this.reset();} reset(){this.r=30+Math.random()*80;this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;this.h=Math.floor(Math.random()*360);this.s=60;this.l=60;} step(){this.x+=this.vx;this.y+=this.vy;if(this.x<-this.r)this.x=W+this.r;if(this.x>W+this.r)this.x=-this.r;if(this.y<-this.r)this.y=H+this.r;if(this.y>H+this.r)this.y=-this.r;} draw(){ctx.beginPath();const grd=ctx.createRadialGradient(this.x,this.y,this.r*0.1,this.x,this.y,this.r);grd.addColorStop(0,`hsla(${this.h},${this.s}%,${this.l}%,0.9)`);grd.addColorStop(1,`hsla(${this.h},${this.s}%,${this.l}%,0.15)`);ctx.fillStyle=grd;ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();}}
+    const ctx = canvas.getContext('2d'); 
+    let W,H; 
+    function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;} 
+    addEventListener('resize',resize); 
+    resize();
+    class Ball{
+      constructor(){this.reset();}
+      reset(){this.r=30+Math.random()*80;this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;this.h=Math.floor(Math.random()*360);this.s=60;this.l=60;}
+      step(){this.x+=this.vx;this.y+=this.vy;if(this.x<-this.r)this.x=W+this.r;if(this.x>W+this.r)this.x=-this.r;if(this.y<-this.r)this.y=H+this.r;if(this.y>H+this.r)this.y=-this.r;}
+      draw(){ctx.beginPath();const grd=ctx.createRadialGradient(this.x,this.y,this.r*0.1,this.x,this.y,this.r);grd.addColorStop(0,`hsla(${this.h},${this.s}%,${this.l}%,0.9)`);grd.addColorStop(1,`hsla(${this.h},${this.s}%,${this.l}%,0.15)`);ctx.fillStyle=grd;ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();}
+    }
     const balls = Array.from({length:6},()=>new Ball());
-    function animate(){ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(253,250,244,0.5)';ctx.fillRect(0,0,W,H);balls.forEach(b=>{b.step();b.draw();});requestAnimationFrame(animate);} animate();
+    function animate(){ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(253,250,244,0.5)';ctx.fillRect(0,0,W,H);balls.forEach(b=>{b.step();b.draw();});requestAnimationFrame(animate);} 
+    animate();
 
     // Tabs
-    function selectTab(id){
-      document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('bg-blue-50'));
-      document.querySelector(`[data-tab="${id}"]`).classList.add('bg-blue-50');
-      document.querySelectorAll('.tabPanel').forEach(p=>p.classList.add('hidden'));
-      document.getElementById('panel-'+id).classList.remove('hidden');
-    }
+    function selectTab(id){document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('bg-blue-50'));document.querySelector(`[data-tab="${id}"]`).classList.add('bg-blue-50');document.querySelectorAll('.tabPanel').forEach(p=>p.classList.add('hidden'));document.getElementById('panel-'+id).classList.remove('hidden');}
     document.querySelectorAll('.tabBtn').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.tab)));
 
     // Chat history
     function loadHistory(){ return JSON.parse(localStorage.getItem('vlsi_chats')||'[]'); }
     function saveHistory(arr){ localStorage.setItem('vlsi_chats', JSON.stringify(arr)); }
-    function renderHistory(){ 
-      const c=loadHistory(); const el=document.getElementById('chatHistory'); el.innerHTML='';
-      c.slice().reverse().forEach(item=>{
-        const div=document.createElement('div');
-        div.className='p-2 rounded hover:bg-gray-100 history-item';
-        div.innerHTML=`<div class='font-medium'>${item.title||'Saved Chat'}</div>`;
-        div.addEventListener('click',()=>{ 
-          document.getElementById('resultOutput').innerHTML=item.output; 
-          document.getElementById('resultArea').classList.remove('hidden'); 
-        });
-        el.appendChild(div);
-      });
-    }
+    function renderHistory(){ const c=loadHistory();const el=document.getElementById('chatHistory');el.innerHTML='';c.slice().reverse().forEach(item=>{ const div=document.createElement('div');div.className='p-2 rounded hover:bg-gray-100 history-item'; div.innerHTML=`<div class='font-medium'>${item.title||'Saved Chat'}</div>`; div.addEventListener('click',()=>{ document.getElementById('resultOutput').innerHTML=item.output; document.getElementById('resultArea').classList.remove('hidden'); }); el.appendChild(div);}); }
     renderHistory();
 
     // Messages
-    function showMessage(msg){ 
-      const mb=document.getElementById('messageBox'); 
-      mb.textContent=msg; 
-      mb.className='message-box show text-green-700 bg-green-100'; 
-      setTimeout(()=>mb.classList.remove('show'),4000); 
-    }
+    function showMessage(msg){ const mb=document.getElementById('messageBox'); mb.textContent=msg; mb.className='message-box show text-green-700 bg-green-100'; setTimeout(()=>mb.classList.remove('show'),4000); }
 
     // New Chat
-    document.getElementById('newChat').addEventListener('click',()=>{ 
-      document.querySelectorAll('textarea').forEach(t=>t.value=''); 
-      document.getElementById('resultArea').classList.add('hidden'); 
-      showMessage('New chat started'); 
-    });
+    document.getElementById('newChat').addEventListener('click',()=>{ document.querySelectorAll('textarea').forEach(t=>t.value=''); document.getElementById('resultArea').classList.add('hidden'); showMessage('New chat started'); });
 
-    // Copy & Save
-    document.getElementById('copyResult').addEventListener('click',()=>{ 
-      navigator.clipboard.writeText(document.getElementById('resultOutput').innerText); 
-      showMessage('Copied'); 
-    });
-    document.getElementById('saveChat').addEventListener('click',()=>{ 
-      const title=prompt('Title for this chat'); 
-      if(!title) return; 
-      const h=loadHistory(); 
-      h.push({title,output:document.getElementById('resultOutput').innerHTML,date:Date.now()}); 
-      saveHistory(h); renderHistory(); showMessage('Saved'); 
-    });
+    // Copy
+    document.getElementById('copyResult').addEventListener('click',()=>{ navigator.clipboard.writeText(document.getElementById('resultOutput').innerText); showMessage('Copied'); });
 
-    const API_KEY = 'AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo';
+    // Save chat
+    document.getElementById('saveChat').addEventListener('click',()=>{ const title=prompt('Title for this chat'); if(!title) return; const h=loadHistory(); h.push({title,output:document.getElementById('resultOutput').innerHTML,date:Date.now()}); saveHistory(h); renderHistory(); showMessage('Saved'); });
 
-    // Google Vertex AI ask function
-    async function askGoogleAI(prompt){
-      try {
-        const res = await fetch(
-          'https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1/publishers/google/models/text-bison-001:predict',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + API_KEY
-            },
-            body: JSON.stringify({ instances:[{ content: prompt }] })
-          }
-        );
+    // OpenAI API key
+    const API_KEY = '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'; // Replace with your OpenAI key
+
+    async function askAI(prompt){
+      try{
+        const res = await fetch('https://api.openai.com/v1/chat/completions',{
+          method:'POST',
+          headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+API_KEY },
+          body: JSON.stringify({ model:'gpt-4', messages:[{role:'user',content:prompt}], temperature:0.7 })
+        });
         const data = await res.json();
-        return data.predictions?.[0]?.content || "No response from Google AI";
-      } catch (e) {
-        return "Error: " + e.message;
-      }
+        if(data?.choices && data.choices[0]?.message?.content){
+          return data.choices[0].message.content;
+        } else if(data?.error?.message){
+          return 'API Error: '+data.error.message;
+        } else {
+          return 'Unexpected response from API';
+        }
+      }catch(e){ return 'Error: '+e.message; }
     }
 
-    // Button hook
-    document.getElementById('askVlsiBtn').addEventListener('click', async ()=>{
-      const q = document.getElementById('vlsiInput').value.trim();
+    // Button hooks
+    document.getElementById('askVlsiBtn').addEventListener('click',async()=>{
+      const q=document.getElementById('vlsiInput').value.trim();
       if(!q){ showMessage('Type a question first'); return; }
       document.getElementById('resultArea').classList.remove('hidden');
       document.getElementById('resultTitle').textContent='VLSI Answer';
-      document.getElementById('resultOutput').innerHTML='Fetching
+      document.getElementById('resultOutput').innerHTML='Fetching answer...';
+      const ans = await askAI(q);
+      document.getElementById('resultOutput').innerHTML=marked.parse(ans);
+    });
+  </script>
+</body>
+</html>
