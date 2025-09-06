@@ -1,215 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VLSI AI Assistant</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  body { font-family: 'Inter', sans-serif; margin:0; background:#f8f6f0; overflow-x:hidden; }
-  .glass { background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); }
-  .message-box{ position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:0.75rem 1rem; border-radius:0.5rem; box-shadow:0 6px 18px rgba(0,0,0,0.12); z-index:60; display:none }
-  .message-box.show{ display:block }
-  .left-width{ width: 320px; }
-  #bgCanvas{ position:fixed; inset:0; z-index:-10; }
-  .file-thumb{ max-width:100%; max-height:140px; border-radius:6px; border:1px solid #eee }
-  .history-item{ cursor:pointer }
-  .tabPanel{ transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VLSI AI Assistant — Live</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; margin:0; background:#f8f6f0; }
+    .glass { background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); transition: all 0.3s ease; }
+    .message-box{ position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:0.75rem 1rem; border-radius:0.5rem; box-shadow:0 6px 18px rgba(0,0,0,0.12); z-index:60; display:none; }
+    .message-box.show{ display:block; }
+    .left-width{ width: 320px; }
+    #bgCanvas{ position:fixed; inset:0; z-index:-10; }
+    .file-thumb{ max-width:100%; max-height:140px; border-radius:6px; border:1px solid #eee; }
+    .history-item{ cursor:pointer; }
+    .tabPanel{ transition: all 0.3s ease; }
+  </style>
 </head>
 <body class="min-h-screen flex items-start justify-center p-6">
 
-<canvas id="bgCanvas"></canvas>
-<div id="messageBox" class="message-box glass text-red-700"></div>
+  <canvas id="bgCanvas"></canvas>
+  <div id="messageBox" class="message-box glass text-red-700"></div>
 
-<div class="flex w-full max-w-6xl gap-6">
+  <div class="flex w-full max-w-6xl gap-6">
 
-  <!-- Left: FAQ + Chat history -->
-  <aside class="left-width glass rounded-xl p-4 shadow-md sticky top-6 self-start h-[80vh] overflow-auto">
-    <h2 class="text-xl font-semibold mb-2">VLSI Quick Queries</h2>
-    <p class="text-sm text-gray-600 mb-3">Tap any topic to get a detailed explanation. Answers are always descriptive.</p>
-    <div id="vlsiFaq" class="space-y-2"></div>
+    <!-- Left Panel -->
+    <aside class="left-width glass rounded-xl p-4 shadow-md sticky top-6 self-start h-[80vh] overflow-auto">
+      <h2 class="text-xl font-semibold mb-2">VLSI Quick Queries</h2>
+      <p class="text-sm text-gray-600 mb-3">Tap any topic to ask — answers are descriptive.</p>
+      <div id="vlsiFaq" class="space-y-2"></div>
 
-    <hr class="my-4">
-    <div class="flex items-center justify-between">
-      <h3 class="font-semibold">Chat History</h3>
-      <button id="clearHistory" class="text-xs text-red-600">Clear</button>
-    </div>
-    <div id="chatHistory" class="mt-2 space-y-2 text-sm text-gray-700"></div>
-
-    <div class="mt-5 text-xs text-gray-600">Help & Contact</div>
-    <div class="mt-2 flex flex-col gap-2 text-sm">
-      <button id="helpBtn" class="text-left p-2 rounded hover:bg-gray-100">Help</button>
-      <button id="contactBtn" class="text-left p-2 rounded hover:bg-gray-100">Contact</button>
-    </div>
-  </aside>
-
-  <!-- Main content -->
-  <main class="flex-1 glass rounded-xl p-6 shadow-md">
-    <header class="flex items-center justify-between mb-4">
-      <div>
-        <h1 class="text-2xl font-bold">VLSI AI Assistant</h1>
-        <p class="text-sm text-gray-600">Design analysis, code optimizer & generator, report summarizer — fully descriptive answers.</p>
+      <hr class="my-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold">Chat History</h3>
+        <button id="clearHistory" class="text-xs text-red-600">Clear</button>
       </div>
-      <div class="flex items-center gap-3">
-        <button id="speakToggle" title="Speak your question" class="px-3 py-2 rounded-lg border">🎙️ Speak</button>
-        <button id="ttsToggle" title="Read response aloud" class="px-3 py-2 rounded-lg border">🔊 Read</button>
-        <button id="newChat" class="bg-blue-600 text-white px-3 py-2 rounded-lg">New Chat</button>
-      </div>
-    </header>
+      <div id="chatHistory" class="mt-2 space-y-2 text-sm text-gray-700"></div>
+    </aside>
 
-    <!-- Tabs -->
-    <div>
-      <nav class="flex gap-2 mb-4 overflow-x-auto">
-        <button class="tabBtn px-4 py-2 rounded-md bg-blue-50" data-tab="vlsi">VLSI Q&A</button>
-        <button class="tabBtn px-4 py-2 rounded-md" data-tab="logs">Log Analyzer</button>
-        <button class="tabBtn px-4 py-2 rounded-md" data-tab="code">Code (Optimize & Generate)</button>
-        <button class="tabBtn px-4 py-2 rounded-md" data-tab="report">Report Summarizer</button>
-        <button class="tabBtn px-4 py-2 rounded-md" data-tab="diagram">Diagram Generator</button>
-      </nav>
-
-      <div id="tabContent">
-        <!-- VLSI Q&A -->
-        <section id="panel-vlsi" class="tabPanel">
-          <textarea id="vlsiInput" rows="4" class="w-full p-3 border rounded-md" placeholder="Type your VLSI question here... (or use the Speak button)"></textarea>
-          <div class="flex gap-2 mt-3">
-            <input id="vlsiFile" type="file" accept="image/*,.pdf" class="hidden">
-            <button id="attachVlsi" class="px-4 py-2 border rounded">📎 Attach Image/PDF</button>
-            <button id="askVlsiBtn" class="ml-auto bg-blue-600 text-white px-4 py-2 rounded">Ask</button>
-          </div>
-        </section>
-
-        <!-- Log Analyzer -->
-        <section id="panel-logs" class="tabPanel hidden">
-          <textarea id="logInput" rows="8" class="w-full p-3 border rounded-md" placeholder="Paste VLSI logs here..."></textarea>
-          <div class="flex gap-2 mt-3">
-            <input id="logFile" type="file" accept=".txt,.log,.gz" class="hidden">
-            <button id="attachLog" class="px-4 py-2 border rounded">📎 Attach Log</button>
-            <button id="analyzeLog" class="ml-auto bg-blue-600 text-white px-4 py-2 rounded">Analyze Log</button>
-          </div>
-        </section>
-
-        <!-- Code -->
-        <section id="panel-code" class="tabPanel hidden">
-          <textarea id="codeInput" rows="10" class="w-full p-3 border rounded-md" placeholder="Paste code or describe module"></textarea>
-          <div class="flex gap-2 mt-3">
-            <input id="codeFiles" type="file" accept=".v,.sv,.vh,.vhdl" class="hidden" multiple>
-            <button id="attachCode" class="px-4 py-2 border rounded">📎 Attach Code</button>
-            <button id="optimizeCode" class="ml-auto bg-purple-600 text-white px-4 py-2 rounded">Optimize / Generate</button>
-          </div>
-        </section>
-
-        <!-- Report -->
-        <section id="panel-report" class="tabPanel hidden">
-          <textarea id="reportInput" rows="8" class="w-full p-3 border rounded-md" placeholder="Paste report content here..."></textarea>
-          <div class="flex gap-2 mt-3">
-            <input id="reportFile" type="file" accept=".txt,.rpt,.pdf" class="hidden">
-            <button id="attachReport" class="px-4 py-2 border rounded">📎 Attach Report</button>
-            <button id="summarizeReport" class="ml-auto bg-green-600 text-white px-4 py-2 rounded">Summarize</button>
-          </div>
-        </section>
-
-        <!-- Diagram -->
-        <section id="panel-diagram" class="tabPanel hidden">
-          <textarea id="diagramInput" rows="5" class="w-full p-3 border rounded-md" placeholder="Describe diagram to generate"></textarea>
-          <div class="flex gap-2 mt-3">
-            <input id="diagramFile" type="file" accept="image/*,.pdf" class="hidden">
-            <button id="attachDiagram" class="px-4 py-2 border rounded">📎 Attach Image</button>
-            <button id="genDiagram" class="ml-auto bg-indigo-600 text-white px-4 py-2 rounded">Generate Diagram</button>
-          </div>
-        </section>
-      </div>
-
-      <div id="resultArea" class="mt-6 p-4 bg-gray-50 rounded-md border hidden">
-        <div class="flex items-start justify-between">
-          <div>
-            <h3 id="resultTitle" class="font-semibold text-lg">Analysis Result</h3>
-            <div id="resultMeta" class="text-xs text-gray-500 mt-1"></div>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="copyResult" class="px-3 py-1 border rounded">Copy</button>
-            <button id="saveChat" class="px-3 py-1 border rounded">Save</button>
-          </div>
+    <!-- Main Content -->
+    <main class="flex-1 glass rounded-xl p-6 shadow-md">
+      <header class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-2xl font-bold">VLSI AI Assistant</h1>
+          <p class="text-sm text-gray-600">Design analysis, code optimizer & generator, report summarizer — descriptive answers.</p>
         </div>
-        <hr class="my-3">
-        <div id="resultOutput" class="prose max-w-none text-gray-800"></div>
-        <div id="resultSources" class="mt-3 text-sm text-gray-600"></div>
+        <div class="flex items-center gap-3">
+          <button id="speakToggle" class="px-3 py-2 rounded-lg border">🎙️ Speak</button>
+          <button id="ttsToggle" class="px-3 py-2 rounded-lg border">🔊 Read</button>
+          <button id="newChat" class="bg-blue-600 text-white px-3 py-2 rounded-lg">New Chat</button>
+        </div>
+      </header>
+
+      <!-- Tabs -->
+      <div>
+        <nav class="flex gap-2 mb-4">
+          <button class="tabBtn px-4 py-2 rounded-md bg-blue-50" data-tab="vlsi">VLSI Q&A</button>
+          <button class="tabBtn px-4 py-2 rounded-md" data-tab="logs">Log Analyzer</button>
+          <button class="tabBtn px-4 py-2 rounded-md" data-tab="code">Code</button>
+          <button class="tabBtn px-4 py-2 rounded-md" data-tab="report">Report Summarizer</button>
+          <button class="tabBtn px-4 py-2 rounded-md" data-tab="diagram">Diagram Generator</button>
+        </nav>
+
+        <div id="tabContent">
+          <!-- VLSI Q&A -->
+          <section id="panel-vlsi" class="tabPanel">
+            <textarea id="vlsiInput" rows="4" class="w-full p-3 border rounded-md" placeholder="Type your VLSI question..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="askVlsiBtn" class="ml-auto bg-blue-600 text-white px-4 py-2 rounded">Ask</button>
+            </div>
+          </section>
+
+          <!-- Other panels -->
+          <section id="panel-logs" class="tabPanel hidden">
+            <textarea id="logInput" rows="8" class="w-full p-3 border rounded-md" placeholder="Paste VLSI logs here..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="analyzeLog" class="ml-auto bg-blue-600 text-white px-4 py-2 rounded">Analyze Log</button>
+            </div>
+          </section>
+
+          <section id="panel-code" class="tabPanel hidden">
+            <textarea id="codeInput" rows="10" class="w-full p-3 border rounded-md" placeholder="Paste code or describe the module."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="optimizeCode" class="ml-auto bg-purple-600 text-white px-4 py-2 rounded">Optimize / Generate</button>
+            </div>
+          </section>
+
+          <section id="panel-report" class="tabPanel hidden">
+            <textarea id="reportInput" rows="8" class="w-full p-3 border rounded-md" placeholder="Paste report content here..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="summarizeReport" class="ml-auto bg-green-600 text-white px-4 py-2 rounded">Summarize</button>
+            </div>
+          </section>
+
+          <section id="panel-diagram" class="tabPanel hidden">
+            <textarea id="diagramInput" rows="5" class="w-full p-3 border rounded-md" placeholder="Describe diagram to generate..."></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="genDiagram" class="ml-auto bg-indigo-600 text-white px-4 py-2 rounded">Generate Diagram</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- Result -->
+        <div id="resultArea" class="mt-6 p-4 bg-gray-50 rounded-md border hidden">
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 id="resultTitle" class="font-semibold text-lg">Analysis Result</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="copyResult" class="px-3 py-1 border rounded">Copy</button>
+              <button id="saveChat" class="px-3 py-1 border rounded">Save</button>
+            </div>
+          </div>
+          <hr class="my-3">
+          <div id="resultOutput" class="prose max-w-none text-gray-800"></div>
+        </div>
       </div>
-    </div>
+    </main>
+  </div>
 
-  </main>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-</div>
+  <script>
+    // Background
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d'); let W,H; function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;} addEventListener('resize',resize); resize();
+    class Ball{constructor(){this.reset();} reset(){this.r=30+Math.random()*80;this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;this.h=Math.floor(Math.random()*360);this.s=60;this.l=60;} step(){this.x+=this.vx;this.y+=this.vy;if(this.x<-this.r)this.x=W+this.r;if(this.x>W+this.r)this.x=-this.r;if(this.y<-this.r)this.y=H+this.r;if(this.y>H+this.r)this.y=-this.r;} draw(){ctx.beginPath();const grd=ctx.createRadialGradient(this.x,this.y,this.r*0.1,this.x,this.y,this.r);grd.addColorStop(0,`hsla(${this.h},${this.s}%,${this.l}%,0.9)`);grd.addColorStop(1,`hsla(${this.h},${this.s}%,${this.l}%,0.15)`);ctx.fillStyle=grd;ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();}}
+    const balls = Array.from({length:6},()=>new Ball());
+    function animate(){ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(253,250,244,0.5)';ctx.fillRect(0,0,W,H);balls.forEach(b=>{b.step();b.draw();});requestAnimationFrame(animate);} animate();
 
-<script>
-const API_KEY = 'YOUR_HIDDEN_API_KEY'; // internal usage only, not displayed
+    // Tabs
+    function selectTab(id){document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('bg-blue-50'));document.querySelector(`[data-tab="${id}"]`).classList.add('bg-blue-50');document.querySelectorAll('.tabPanel').forEach(p=>p.classList.add('hidden'));document.getElementById('panel-'+id).classList.remove('hidden');}
+    document.querySelectorAll('.tabBtn').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.tab)));
 
-// Background
-const canvas = document.getElementById('bgCanvas'); const ctx = canvas.getContext('2d'); let W,H;
-function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}
-addEventListener('resize',resize); resize();
-class Ball{constructor(){this.reset()}
-reset(){this.r=30+Math.random()*80;this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-0.5)*0.6;this.vy=(Math.random()-0.5)*0.6;this.h=Math.floor(Math.random()*360);this.s=60;this.l=60}
-step(){this.x+=this.vx;this.y+=this.vy;if(this.x<-this.r)this.x=W+this.r;if(this.x>W+this.r)this.x=-this.r;if(this.y<-this.r)this.y=H+this.r;if(this.y>H+this.r)this.y=-this.r}
-draw(){ctx.beginPath();const grd=ctx.createRadialGradient(this.x,this.y,this.r*0.1,this.x,this.y,this.r);grd.addColorStop(0,`hsla(${this.h},${this.s}%,${this.l}%,0.9)`);grd.addColorStop(1,`hsla(${this.h},${this.s}%,${this.l}%,0.15)`);ctx.fillStyle=grd;ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();}}
-const balls=Array.from({length:6},()=>new Ball());
-function animate(){ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(253,250,244,0.5)';ctx.fillRect(0,0,W,H);balls.forEach(b=>{b.step();b.draw();});requestAnimationFrame(animate);}
-animate();
+    // Chat history
+    function loadHistory(){ return JSON.parse(localStorage.getItem('vlsi_chats')||'[]'); }
+    function saveHistory(arr){ localStorage.setItem('vlsi_chats', JSON.stringify(arr)); }
+    function renderHistory(){ const c=loadHistory();const el=document.getElementById('chatHistory');el.innerHTML='';c.slice().reverse().forEach(item=>{ const div=document.createElement('div');div.className='p-2 rounded hover:bg-gray-100 history-item'; div.innerHTML=`<div class='font-medium'>${item.title||'Saved Chat'}</div>`; div.addEventListener('click',()=>{ document.getElementById('resultOutput').innerHTML=item.output; document.getElementById('resultArea').classList.remove('hidden'); }); el.appendChild(div);}); }
+    renderHistory();
 
-// Tabs
-function selectTab(id){document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('bg-blue-50'));document.querySelector(`[data-tab="${id}"]`).classList.add('bg-blue-50');document.querySelectorAll('.tabPanel').forEach(p=>p.classList.add('hidden'));document.getElementById('panel-'+id).classList.remove('hidden');}
-document.querySelectorAll('.tabBtn').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.tab)));
+    // Messages
+    function showMessage(msg){ const mb=document.getElementById('messageBox'); mb.textContent=msg; mb.className='message-box show text-green-700 bg-green-100'; setTimeout(()=>mb.classList.remove('show'),4000); }
 
-// FAQ
-const faq=[{q:'What is VLSI?',a:'VLSI (Very-Large-Scale Integration) combines billions of transistors on a single chip.'},{q:'What is Physical Design?',a:'Physical Design converts netlist into a geometric layout — placement, routing, GDSII.'},{q:'What is Design Verification?',a:'Ensures the design meets specifications using simulation and formal checks.'}];
-const vlsiFaqDiv=document.getElementById('vlsiFaq');
-faq.forEach(f=>{const btn=document.createElement('button');btn.className='w-full text-left p-2 rounded hover:bg-gray-50 history-item';btn.innerHTML=`<strong>${f.q}</strong>`;btn.addEventListener('click',()=>{document.getElementById('vlsiInput').value=f.q; selectTab('vlsi');});vlsiFaqDiv.appendChild(btn);});
+    // New Chat
+    document.getElementById('newChat').addEventListener('click',()=>{ document.querySelectorAll('textarea').forEach(t=>t.value=''); document.getElementById('resultArea').classList.add('hidden'); showMessage('New chat started'); });
 
-// Chat history
-function loadHistory(){return JSON.parse(localStorage.getItem('vlsi_chats')||'[]');}
-function saveHistory(arr){localStorage.setItem('vlsi_chats',JSON.stringify(arr));}
-function renderHistory(){const c=loadHistory();const el=document.getElementById('chatHistory');el.innerHTML='';c.slice().reverse().forEach((item)=>{const div=document.createElement('div');div.className='p-2 rounded hover:bg-gray-100 history-item';div.innerHTML=`<div class='font-medium'>${item.title||'Saved Chat'}</div><div class='text-xs text-gray-500 mt-1'>${new Date(item.date).toLocaleString()}</div>`;div.addEventListener('click',()=>{loadChat(item);});el.appendChild(div);});}
-function addHistoryItem(title,input,output,sources){const h=loadHistory();h.push({title,input,output,sources,date:Date.now()});saveHistory(h);renderHistory();}
-function loadChat(item){document.getElementById('resultArea').classList.remove('hidden');document.getElementById('resultTitle').textContent=item.title||'Saved Chat';document.getElementById('resultOutput').innerHTML=item.output;document.getElementById('resultSources').innerHTML=item.sources?'<strong>Sources:</strong> '+item.sources.map(s=>`<a class="underline" href="#" data-src="${s}">${s}</a>`).join(', '):'';}
-renderHistory();
-document.getElementById('clearHistory').addEventListener('click',()=>{if(confirm('Clear all saved chats?')){localStorage.removeItem('vlsi_chats');renderHistory();}});
+    // Copy
+    document.getElementById('copyResult').addEventListener('click',()=>{ navigator.clipboard.writeText(document.getElementById('resultOutput').innerText); showMessage('Copied'); });
 
-// Help & Contact Modals
-document.getElementById('helpBtn').addEventListener('click',()=>alert('For guidance, use FAQs or type your question.')); 
-document.getElementById('contactBtn').addEventListener('click',()=>alert('Contact: support@vlsiai.com'));
+    // Save chat
+    document.getElementById('saveChat').addEventListener('click',()=>{ const title=prompt('Title for this chat'); if(!title) return; const h=loadHistory(); h.push({title,output:document.getElementById('resultOutput').innerHTML,date:Date.now()}); saveHistory(h); renderHistory(); showMessage('Saved'); });
 
-// File attach
-document.getElementById('attachVlsi').addEventListener('click',()=>document.getElementById('vlsiFile').click());
-document.getElementById('attachLog').addEventListener('click',()=>document.getElementById('logFile').click());
-document.getElementById('attachCode').addEventListener('click',()=>document.getElementById('codeFiles').click());
-document.getElementById('attachReport').addEventListener('click',()=>document.getElementById('reportFile').click());
-document.getElementById('attachDiagram').addEventListener('click',()=>document.getElementById('diagramFile').click());
+    // Hidden API key
+    const API_KEY = 'AIzaSyDok7jTaB2sK8_Dtmh195ATjrONPxiHOgo';
 
-// New Chat
-document.getElementById('newChat').addEventListener('click',()=>{document.getElementById('resultArea').classList.add('hidden');document.querySelectorAll('textarea').forEach(t=>t.value='');});
+    async function askAI(prompt){
+      try{
+        const res = await fetch('https://api.openai.com/v1/chat/completions',{
+          method:'POST',
+          headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+API_KEY },
+          body: JSON.stringify({ model:'gpt-4', messages:[{role:'user',content:prompt}], temperature:0.7 })
+        });
+        const data = await res.json();
+        return data.choices[0].message.content;
+      }catch(e){ return 'Error: '+e.message; }
+    }
 
-// TTS / Speech
-let synth=window.speechSynthesis;let ttsEnabled=false;document.getElementById('ttsToggle').addEventListener('click',()=>{ttsEnabled=!ttsEnabled;alert('TTS '+(ttsEnabled?'Enabled':'Disabled'));});
-let recognition, speakEnabled=false;
-if('webkitSpeechRecognition' in window){recognition=new webkitSpeechRecognition();recognition.continuous=false;recognition.lang='en-US';recognition.interimResults=false;recognition.onresult=function(e){document.getElementById('vlsiInput').value=e.results[0][0].transcript;};}
-document.getElementById('speakToggle').addEventListener('click',()=>{if(recognition){recognition.start();}});
-
-// API interaction (hidden key)
-async function askAI(prompt, tab){ 
-  // Using hidden API_KEY internally
-  // Here is a mock fetch request, you can replace with actual fetch to your backend using API_KEY
-  return new Promise(res=>setTimeout(()=>res({output:'<p>Descriptive answer for: '+prompt+'</p>',sources:['Internal Docs']}),500));
-}
-
-// Buttons
-document.getElementById('askVlsiBtn').addEventListener('click',async()=>{const q=document.getElementById('vlsiInput').value.trim();if(!q)return;document.getElementById('resultArea').classList.remove('hidden');document.getElementById('resultTitle').textContent=q;document.getElementById('resultOutput').innerHTML='Loading...';const r=await askAI(q,'vlsi');document.getElementById('resultOutput').innerHTML=r.output;document.getElementById('resultSources').innerHTML='<strong>Sources:</strong> '+r.sources.join(', ');addHistoryItem(q,q,r.output,r.sources);if(ttsEnabled){let u=new SpeechSynthesisUtterance(r.output.replace(/<[^>]+>/g,''));synth.speak(u);}});
-
-// Copy
-document.getElementById('copyResult').addEventListener('click',()=>{navigator.clipboard.writeText(document.getElementById('resultOutput').innerText);alert('Copied!');});
-</script>
-
+    // Button hooks
+    document.getElementById('askVlsiBtn').addEventListener('click',async()=>{
+      const q=document.getElementById('vlsiInput').value.trim();
+      if(!q){ showMessage('Type a question first'); return; }
+      document.getElementById('resultArea').classList.remove('hidden');
+      document.getElementById('resultTitle').textContent='VLSI Answer';
+      document.getElementById('resultOutput').innerHTML='Fetching answer...';
+      const ans = await askAI(q);
+      document.getElementById('resultOutput').innerHTML=marked.parse(ans);
+    });
+  </script>
 </body>
 </html>
