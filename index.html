@@ -1,48 +1,447 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>VLSI AI Predictor</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
-      background: #f5f5f5;
-    }
-    input, button {
-      padding: 10px;
-      font-size: 16px;
-      margin: 5px;
-    }
-    #result {
-      margin-top: 20px;
-      font-weight: bold;
-      color: green;
-    }
-  </style>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VLSI AI Assistant</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+
+        body {
+
+            font-family: 'Inter', sans-serif;
+
+            background-color: #f3f4f6;
+
+        }
+
+        .container {
+
+            max-width: 900px;
+
+        }
+
+        .message-box {
+
+            position: fixed;
+
+            top: 20px;
+
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            padding: 1rem;
+
+            border-radius: 0.5rem;
+
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+            z-index: 1000;
+
+            display: none;
+
+            text-align: center;
+
+        }
+
+        .message-box.show {
+
+            display: block;
+
+        }
+
+    </style>
+
 </head>
-<body>
-  <h1>VLSI AI Wire Length Predictor</h1>
-  <input type="text" id="inputText" placeholder="Enter input value">
-  <button onclick="getPrediction()">Predict</button>
 
-  <div id="result"></div>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-  <script>
-    async function getPrediction() {
-      const input = document.getElementById("inputText").value;
-      const response = await fetch("/api/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input })
-      });
 
-      const data = await response.json();
-      document.getElementById("result").innerText = data.prediction || data.result || "Error!";
-    }
-  </script>
+
+    <div id="messageBox" class="message-box bg-red-100 text-red-800"></div>
+
+
+
+    <div class="container mx-auto bg-white rounded-xl shadow-lg p-8">
+
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">VLSI AI Assistant</h1>
+
+        <p class="text-gray-600 mb-6 text-center">Your all-in-one AI assistant for VLSI design analysis, optimization, and reporting.</p>
+
+
+
+        <!-- Tabbed Interface -->
+
+        <div class="flex border-b border-gray-200 mb-6">
+
+            <button id="tab-log" class="tab-button w-1/3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
+
+                Log Analyzer
+
+            </button>
+
+            <button id="tab-code" class="tab-button w-1/3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
+
+                Code Optimizer
+
+            </button>
+
+            <button id="tab-report" class="tab-button w-1/3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600 border-b-2 border-transparent hover:border-blue-600 transition-colors duration-200">
+
+                Report Summarizer
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Content Panels -->
+
+        <div id="panel-log" class="tab-panel">
+
+            <p class="text-gray-600 mb-4 text-center">Paste your VLSI log data below and get an instant analysis from an expert AI assistant.</p>
+
+            <textarea id="logInput" rows="10" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+
+            <div class="flex justify-center mt-6">
+
+                <button id="analyzeLogButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+
+                    Analyze Log ✨
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <div id="panel-code" class="tab-panel hidden">
+
+            <p class="text-gray-600 mb-4 text-center">Paste your Verilog or VHDL code to get suggestions for optimization.</p>
+
+            <textarea id="codeInput" rows="10" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+
+            <div class="flex justify-center mt-6">
+
+                <button id="optimizeCodeButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
+
+                    Optimize Code ✨
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <div id="panel-report" class="tab-panel hidden">
+
+            <p class="text-gray-600 mb-4 text-center">Paste a design report (e.g., timing, power) for a concise summary of key metrics and warnings.</p>
+
+            <textarea id="reportInput" rows="10" class="w-full p-4 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+
+            <div class="flex justify-center mt-6">
+
+                <button id="summarizeReportButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+
+                    Summarize Report ✨
+
+                </button>
+
+            </div>
+
+        </div>
+
+        
+
+        <div id="loadingIndicator" class="hidden flex items-center justify-center space-x-2 text-gray-600 mb-6">
+
+            <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+
+            </svg>
+
+            <span>Analyzing...</span>
+
+        </div>
+
+
+
+        <div id="resultContainer" class="hidden mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Analysis Result</h2>
+
+            <div id="analysisOutput" class="prose max-w-none text-gray-700 leading-relaxed"></div>
+
+        </div>
+
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const tabs = document.querySelectorAll('.tab-button');
+
+            const panels = document.querySelectorAll('.tab-panel');
+
+            const messageBox = document.getElementById('messageBox');
+
+            const logInput = document.getElementById('logInput');
+
+            const codeInput = document.getElementById('codeInput');
+
+            const reportInput = document.getElementById('reportInput');
+
+            const analyzeLogButton = document.getElementById('analyzeLogButton');
+
+            const optimizeCodeButton = document.getElementById('optimizeCodeButton');
+
+            const summarizeReportButton = document.getElementById('summarizeReportButton');
+
+            const loadingIndicator = document.getElementById('loadingIndicator');
+
+            const resultContainer = document.getElementById('resultContainer');
+
+            const analysisOutput = document.getElementById('analysisOutput');
+
+            
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            
+
+            function showMessage(message, type = 'error') {
+
+                messageBox.textContent = message;
+
+                messageBox.className = `message-box show ${type === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+
+                setTimeout(() => {
+
+                    messageBox.classList.remove('show');
+
+                }, 5000);
+
+            }
+
+
+
+            function switchTab(targetId) {
+
+                tabs.forEach(tab => tab.classList.remove('border-blue-600', 'border-transparent'));
+
+                panels.forEach(panel => panel.classList.add('hidden'));
+
+
+
+                document.getElementById(`tab-${targetId}`).classList.add('border-blue-600');
+
+                document.getElementById(`panel-${targetId}`).classList.remove('hidden');
+
+            }
+
+
+
+            tabs.forEach(tab => {
+
+                tab.addEventListener('click', (e) => {
+
+                    const targetId = e.target.id.replace('tab-', '');
+
+                    switchTab(targetId);
+
+                });
+
+            });
+
+
+
+            // Set initial active tab
+
+            switchTab('log');
+
+
+
+            async function callGemini(systemPrompt, userQuery) {
+
+                loadingIndicator.classList.remove('hidden');
+
+                resultContainer.classList.add('hidden');
+
+                analysisOutput.innerHTML = '';
+
+
+
+                try {
+
+                    const apiKey = "Your_API_Key";
+
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                    const payload = {
+
+                        contents: [{ parts: [{ text: userQuery }] }],
+
+                        systemInstruction: {
+
+                            parts: [{ text: systemPrompt }]
+
+                        },
+
+                    };
+
+                    
+
+                    const response = await fetch(apiUrl, {
+
+                        method: 'POST',
+
+                        headers: { 'Content-Type': 'application/json' },
+
+                        body: JSON.stringify(payload)
+
+                    });
+
+
+
+                    if (!response.ok) {
+
+                        throw new Error(`HTTP error! status: ${response.status}`);
+
+                    }
+
+
+
+                    const result = await response.json();
+
+                    const candidate = result.candidates?.[0];
+
+
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+
+                        analysisOutput.innerHTML = marked.parse(candidate.content.parts[0].text);
+
+                        resultContainer.classList.remove('hidden');
+
+                    } else {
+
+                        showMessage('No analysis could be generated. Please try again.');
+
+                    }
+
+                } catch (error) {
+
+                    console.error('An error occurred:', error);
+
+                    showMessage(`An error occurred: ${error.message}`);
+
+                } finally {
+
+                    loadingIndicator.classList.add('hidden');
+
+                }
+
+            }
+
+
+
+            analyzeLogButton.addEventListener('click', () => {
+
+                const logData = logInput.value.trim();
+
+                if (logData === '') {
+
+                    showMessage('Please paste a log to analyze.');
+
+                    return;
+
+                }
+
+                const systemPrompt = `You are a world-class VLSI expert. You will analyze a VLSI log file and provide a simple, easy-to-understand explanation of any errors or warnings. Provide a suggested fix for each issue you identify. Format your response using markdown for clear headings and bullet points.`;
+
+                const userQuery = `Analyze the following VLSI log and explain any errors, warnings, or issues. For each issue, provide a suggested fix:\n\n${logData}`;
+
+                callGemini(systemPrompt, userQuery);
+
+            });
+
+
+
+            optimizeCodeButton.addEventListener('click', () => {
+
+                const codeData = codeInput.value.trim();
+
+                if (codeData === '') {
+
+                    showMessage('Please paste code to optimize.');
+
+                    return;
+
+                }
+
+                const systemPrompt = `You are a world-class VLSI digital logic design and synthesis expert. You will analyze the provided Verilog or VHDL code and provide suggestions for optimizing it for area, power, or timing. Explain your suggestions clearly and provide an example of the optimized code.`;
+
+                const userQuery = `Analyze and optimize the following code. Focus on general best practices for synthesis:\n\n${codeData}`;
+
+                callGemini(systemPrompt, userQuery);
+
+            });
+
+
+
+            summarizeReportButton.addEventListener('click', () => {
+
+                const reportData = reportInput.value.trim();
+
+                if (reportData === '') {
+
+                    showMessage('Please paste a report to summarize.');
+
+                    return;
+
+                }
+
+                const systemPrompt = `You are a world-class VLSI design verification and sign-off expert. You will summarize the provided design report, highlighting the most important metrics, any critical warnings or violations, and the overall pass/fail status. Keep the summary concise and professional.`;
+
+                const userQuery = `Summarize the following VLSI design report. Highlight key metrics and warnings:\n\n${reportData}`;
+
+                callGemini(systemPrompt, userQuery);
+
+            });
+
+
+
+        });
+
+    </script>
+
 </body>
+
 </html>
-
-
